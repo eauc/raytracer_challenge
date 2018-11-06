@@ -1,0 +1,109 @@
+#+TITLE: 02 - Colors
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+* Colors
+
+  Colors are (red, green, blue) tuples.
+
+  #+NAME: colors_create_test
+  #+BEGIN_SRC clojure
+  (testing "Colors are (red, green, blue) tuples"
+    (let [col (color -0.5 0.4 1.7)]
+      (is (= -0.5
+             (red col)))
+      (is (= 0.4
+             (green col)))
+      (is (= 1.7
+             (blue col)))))
+  #+END_SRC
+
+  #+NAME: colors_create
+  #+BEGIN_SRC clojure
+  (def color t/tuple)
+
+  (def red t/x)
+
+  (def green t/y)
+
+  (def blue t/z)
+  #+END_SRC
+
+* Operations
+
+  Colors support addition, substraction and multiplication by a scalar.
+
+  #+NAME: colors_add_sub_mul_test
+  #+BEGIN_SRC clojure
+  (testing "Adding colors"
+    (is (t/eq? (color 1.6 0.7 1.0)
+               (add (color 0.9 0.6 0.75)
+                    (color 0.7 0.1 0.25)))))
+
+  (testing "Substracting colors"
+    (is (t/eq? (color 0.2 0.5 0.5)
+               (sub (color 0.9 0.6 0.75)
+                    (color 0.7 0.1 0.25)))))
+
+  (testing "Multiplying a color by a scalar"
+    (is (t/eq? (color 0.4 0.6 0.8)
+               (mul (color 0.2 0.3 0.4) 2.0))))
+  #+END_SRC
+
+  #+NAME: colors_add_sub_mul
+  #+BEGIN_SRC clojure
+  (def add t/add)
+
+  (def sub t/sub)
+
+  (def mul t/mul)
+  #+END_SRC
+
+  We can also multiply 2 colors.
+
+  #+NAME: colors_dot_test
+  #+BEGIN_SRC clojure
+  (testing "Multiplying 2 colors"
+    (is (t/eq? (color 0.9 0.2 0.04)
+               (dot (color 1.0 0.2 0.4)
+                    (color 0.9 1.0 0.1)))))
+  #+END_SRC
+
+  #+NAME: colors_dot
+  #+BEGIN_SRC clojure
+  (def dot (partial map *))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+   #+BEGIN_SRC clojure :tangle ../src/rt_clj/colors.clj
+   (ns rt-clj.colors
+     (:require [rt-clj.tuples :as t]))
+
+
+   <<colors_create>>
+
+
+   <<colors_add_sub_mul>>
+
+   <<colors_dot>>
+   #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/colors_test.clj
+  (ns rt-clj.colors-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.colors :refer :all]
+              [rt-clj.tuples :as t]))
+
+  (deftest colors-test
+    <<colors_create_test>>
+
+    <<colors_add_sub_mul_test>>
+
+    <<colors_dot_test>>)
+  #+END_SRC
