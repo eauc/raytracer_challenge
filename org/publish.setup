@@ -1,0 +1,9 @@
+#+SETUPFILE: ~/org-html-themes/setup/theme-readtheorg.setup
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="./theme.css"/>
+#+HTML_HEAD: <style type="text/css">
+#+HTML_HEAD: body { color: #444; }
+#+HTML_HEAD: pre.src { background-color: #333; color: white; }
+#+HTML_HEAD: </style>
+
+#+PROPERTY: header-args :comments no

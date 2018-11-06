@@ -1,8 +1,10 @@
-#+TITLE: Tuples
-#+EXPORT_FILE_NAME: ../doc/tuples.html
+#+TITLE: 01 - Tuples
+#+SETUPFILE: ./publish.setup
 #+PROPERTY: header-args :exports code :tangle no
 
-* Tuples
+[[./index.org][Documentation index]]
+
+* Points & Vectors
 
   Tuples are used to represent vectors and points.
 
@@ -257,7 +259,7 @@
                (* x2 y1))))
   #+END_SRC
 
-** Files                                                           :noexport:
+* Files                                                           :noexport:
    :PROPERTIES:
    :header-args: :exports none :noweb yes
    :END:
