@@ -1,0 +1,221 @@
+#+TITLE: 04 - Matrix Transformations
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+* Translation
+
+  We can translate point by multiplying them by a translation matrix.
+
+  Vectors are unchanged by translations.
+
+  #+NAME: trans_tl_test
+  #+BEGIN_SRC clojure
+  (testing "Multiplying a point by a translation matrix"
+    (is (= (t/point 2. 1. 7.)
+           (m/mul (translation 5. -3. 2.) (t/point -3. 4. 5.)))))
+
+  (testing "Multiplying a point by the inverse of a translation matrix"
+    (is (= (t/point -8. 7. 3.)
+           (m/mul (m/inverse (translation 5. -3. 2.)) (t/point -3. 4. 5.)))))
+
+  (testing "Translation does not affect vectors"
+    (is (= (t/vector 1. 2. 3.)
+           (m/mul (translation 5. -3. 2.) (t/vector 1. 2. 3.)))))
+  #+END_SRC
+
+  #+NAME: trans_tl
+  #+BEGIN_SRC clojure
+  (defn translation [x y z]
+    (m/matrix [[1. 0. 0. x]
+               [0. 1. 0. y]
+               [0. 0. 1. z]
+               [0. 0. 0. 1.]]))
+  #+END_SRC
+
+* Scaling
+
+  We can scale points (objects) and vectors.
+
+  #+NAME: trans_sc_test
+  #+BEGIN_SRC clojure
+  (testing "A scaling matrix applied to a point"
+    (is (= (t/point -8. 18. 32.)
+           (m/mul (scaling 2. 3. 4.)
+                  (t/point -4. 6. 8.)))))
+
+  (testing "A scaling matrix applied to a vector"
+    (is (= (t/vector -8. 18. 32.)
+           (m/mul (scaling 2. 3. 4.)
+                  (t/vector -4. 6. 8.)))))
+  #+END_SRC
+
+  #+NAME: trans_sc
+  #+BEGIN_SRC clojure
+  (defn scaling [x y z]
+    (m/matrix [[x 0. 0. 0.]
+               [0. y 0. 0.]
+               [0. 0. z 0.]
+               [0. 0. 0. 1.]]))
+  #+END_SRC
+
+* Rotation
+
+  Rotate points and vector around origin, left hand convention.
+
+  #+NAME: trans_rt_test
+  #+BEGIN_SRC clojure
+  (testing "Rotating a point around the x axis"
+    (let [p (t/point 0. 1. 0.)
+          half-quarter (rotation-x (/ Math/PI 4))
+          full-quarter (rotation-x (/ Math/PI 2))]
+      (is (t/eq? (t/point 0. (/ (Math/sqrt 2) 2) (/ (Math/sqrt 2) 2))
+                 (m/mul half-quarter p)))
+      (is (t/eq? (t/point 0. 0. 1.)
+                 (m/mul full-quarter p)))))
+
+  (testing "The inverse of an x-rotation rotates in the opposite direction"
+    (let [p (t/point 0. 1. 0.)
+          half-quarter (rotation-x (/ Math/PI 4))]
+      (is (t/eq? (t/point 0. (/ (Math/sqrt 2) 2) (- 0 (/ (Math/sqrt 2) 2)))
+                 (m/mul (m/inverse half-quarter) p)))))
+
+  (testing "Rotating a point around the y axis"
+    (let [p (t/point 0. 0. 1.)
+          half-quarter (rotation-y (/ Math/PI 4))
+          full-quarter (rotation-y (/ Math/PI 2))]
+      (is (t/eq? (t/point (/ (Math/sqrt 2) 2) 0. (/ (Math/sqrt 2) 2))
+                 (m/mul half-quarter p)))
+      (is (t/eq? (t/point 1. 0. 0.)
+                 (m/mul full-quarter p)))))
+
+  (testing "Rotating a point around the z axis"
+    (let [p (t/point 0. 1. 0.)
+          half-quarter (rotation-z (/ Math/PI 4))
+          full-quarter (rotation-z (/ Math/PI 2))]
+      (is (t/eq? (t/point (- 0. (/ (Math/sqrt 2) 2)) (/ (Math/sqrt 2) 2) 0.)
+                 (m/mul half-quarter p)))
+      (is (t/eq? (t/point -1. 0. 0.)
+                 (m/mul full-quarter p)))))
+  #+END_SRC
+
+
+  #+NAME: trans_rt
+  #+BEGIN_SRC clojure
+  (defn rotation-x [t]
+    (m/matrix [[1. 0. 0. 0.]
+               [0. (Math/cos t) (- 0 (Math/sin t)) 0.]
+               [0. (Math/sin t) (Math/cos t) 0.]
+               [0. 0. 0. 1.]]))
+
+  (defn rotation-y [t]
+    (m/matrix [[(Math/cos t) 0. (Math/sin t) 0.]
+               [0. 1. 0. 0.]
+               [(- 0. (Math/sin t)) 0 (Math/cos t) 0.]
+               [0. 0. 0. 1.]]))
+
+  (defn rotation-z [t]
+    (m/matrix [[(Math/cos t) (- 0. (Math/sin t)) 0. 0.]
+               [(Math/sin t) (Math/cos t) 0. 0.]
+               [0. 0. 1. 0.]
+               [0. 0. 0. 1.]]))
+  #+END_SRC
+
+* Shearing
+
+  When applied to a tuple, a shearing transformation changes each component of the tuple in proportion to the other two components. That is to say, the x component changes in proportion to y and z , y changes in proportion to x and z , and z changes in proportion to x and y.
+
+  #+NAME: trans_sh_test
+  #+BEGIN_SRC clojure
+  (testing "Shearing transformation moves x in proportion to y"
+    (is (= (t/point 5. 3. 4.)
+           (m/mul (shearing 1. 0. 0. 0. 0. 0.) (t/point 2. 3. 4.)))))
+
+  (testing "Shearing transformation moves x in proportion to z"
+    (is (= (t/point 6. 3. 4.)
+           (m/mul (shearing 0. 1. 0. 0. 0. 0.) (t/point 2. 3. 4.)))))
+
+  (testing "Shearing transformation moves y in proportion to x"
+    (is (= (t/point 2. 5. 4.)
+           (m/mul (shearing 0. 0. 1. 0. 0. 0.) (t/point 2. 3. 4.)))))
+
+  (testing "Shearing transformation moves y in proportion to z"
+    (is (= (t/point 2. 7. 4.)
+           (m/mul (shearing 0. 0. 0. 1. 0. 0.) (t/point 2. 3. 4.)))))
+
+  (testing "Shearing transformation moves z in proportion to x"
+    (is (= (t/point 2. 3. 6.)
+           (m/mul (shearing 0. 0. 0. 0. 1. 0.) (t/point 2. 3. 4.)))))
+
+  (testing "Shearing transformation moves z in proportion to y"
+    (is (= (t/point 2. 3. 7.)
+           (m/mul (shearing 0. 0. 0. 0. 0. 1.) (t/point 2. 3. 4.)))))
+  #+END_SRC
+
+  #+NAME: trans_sh
+  #+BEGIN_SRC clojure
+  (defn shearing [xy xz yx yz zx zy]
+    (m/matrix [[1. xy xz 0.]
+               [yx 1. yz 0.]
+               [zx zy 1. 0.]
+               [0. 0. 0. 1.]]))
+  #+END_SRC
+
+* Sequences
+
+  We can apply each transformation in a sequence.
+
+  #+NAME: trans_seq_test
+  #+BEGIN_SRC clojure
+  (testing "Individual transformations are applied in sequence"
+    (let [p (t/point 1. 0. 1.)
+          r (rotation-x (/ Math/PI 2))
+          s (scaling 5. 5. 5.)
+          t (translation 10. 5. 7.)]
+      (is (t/eq? (t/point 1. -1. 0.)
+                 (m/mul r p)))
+      (is (t/eq? (t/point 5. -5. 0.)
+                 (m/mul s (m/mul r p))))
+      (is (t/eq? (t/point 15. 0. 7.)
+                 (m/mul t (m/mul s (m/mul r p)))))))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+   #+BEGIN_SRC clojure :tangle ../src/rt_clj/transformations.clj
+   (ns rt-clj.transformations
+     (:import java.lang.Math)
+     (:require [rt-clj.matrices :as m]))
+
+
+   <<trans_tl>>
+
+   <<trans_sc>>
+
+   <<trans_rt>>
+
+   <<trans_sh>>
+   #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/transformations_test.clj
+  (ns rt-clj.transformations-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.transformations :refer :all]
+              [rt-clj.matrices :as m]
+              [rt-clj.tuples :as t]))
+
+  (deftest transformations-test
+    <<trans_tl_test>>
+
+    <<trans_sc_test>>
+
+    <<trans_rt_test>>
+
+    <<trans_sh_test>>
+
+    <<trans_seq_test>>)
+  #+END_SRC
