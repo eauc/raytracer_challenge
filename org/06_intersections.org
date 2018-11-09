@@ -1,0 +1,114 @@
+#+TITLE: 06 - Intersections
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+* Creation
+
+  Intersections store the object hit and the distance from origin on the ray.
+
+  #+NAME: ints_create_test
+  #+BEGIN_SRC clojure
+  (testing "An intersection encapsulates 't' and 'object'"
+    (let [s {:object :test}
+          i (intersection 3.5 s)]
+      (is (= 3.5
+             (:t i)))
+      (is (= s
+             (:object i)))))
+
+  (testing "Aggregating intersections"
+    (let [s {:object :test}
+          i1 (intersection 1. s)
+          i2 (intersection 2. s)
+          xs (intersections i1 i2)]
+      (is (= 2
+             (count xs)))
+      (is (= 1.
+             (:t (first xs))))
+      (is (= 2.
+             (:t (second xs))))))
+  #+END_SRC
+
+  #+NAME: ints_create
+  #+BEGIN_SRC clojure
+  (defn intersection [t object]
+    {:t t
+     :object object})
+
+  (def intersections vector)
+  #+END_SRC
+
+* Hit
+
+  We can find a hit in a list of intersections. It's always the lowest non-negative intersection.
+
+  #+NAME: ints_hit_test
+  #+BEGIN_SRC clojure
+  (testing "The hit, when all intersections have positive t"
+    (let [s {:object :test}
+          i1 (intersection 1. s)
+          i2 (intersection 2. s)
+          xs (intersections i2 i1)]
+      (is (= i1
+             (hit xs)))))
+
+  (testing "The hit, when some intersections have negative t"
+    (let [s {:object :test}
+          i1 (intersection -1. s)
+          i2 (intersection 2. s)
+          xs (intersections i2 i1)]
+      (is (= i2
+             (hit xs)))))
+
+  (testing "The hit, when all intersections have negative t"
+    (let [s {:object :test}
+          i1 (intersection -1. s)
+          i2 (intersection -2. s)
+          xs (intersections i2 i1)]
+      (is (= nil
+             (hit xs)))))
+
+  (testing "The hit is always the lowest non-negative intersection"
+    (let [s {:object :test}
+          i1 (intersection 5. s)
+          i2 (intersection 7. s)
+          i3 (intersection -3. s)
+          i4 (intersection 2. s)
+          xs (intersections i2 i1 i3 i4)]
+      (is (= i4
+             (hit xs)))))
+  #+END_SRC
+
+  #+NAME: ints_hit
+  #+BEGIN_SRC clojure
+  (defn hit [is]
+    (first (sort-by :t (filter #(< 0 (:t %)) is))))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/intersections.clj
+  (ns rt-clj.intersections)
+
+
+  <<ints_create>>
+
+
+  <<ints_hit>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/intersections_test.clj
+  (ns rt-clj.intersections-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.intersections :refer :all]))
+
+  (deftest intersections-test
+    <<ints_create_test>>
+
+    <<ints_hit_test>>)
+  #+END_SRC
