@@ -279,46 +279,72 @@
     (every? true? (map close? a b)))
   #+END_SRC
 
+* Reflection
+
+  Vectors can be reflected on a surface defined by a normal.
+
+  #+NAME: tuples_reflect_test
+  #+BEGIN_SRC clojure
+  (testing "Reflecting a vector approaching at 45°"
+    (is (eq? (vector 1. 1. 0.)
+             (reflect (vector 1. -1. 0.) (vector 0. 1. 0.)))))
+
+  (testing "Reflecting a vector off a slanted surface"
+    (let [d (/ (Math/sqrt 2.) 2.)]
+      (is (eq? (vector 1. 0. 0.)
+               (reflect (vector 0. -1. 0.) (vector d d 0.))))))
+  #+END_SRC
+
+  #+NAME: tuples_reflect
+  #+BEGIN_SRC clojure
+  (defn reflect [in normal]
+    (sub in (mul normal (* 2 (dot in normal)))))
+  #+END_SRC
+
 * Files                                                           :noexport:
    :PROPERTIES:
    :header-args: :exports none :noweb yes
    :END:
 
-   #+BEGIN_SRC clojure :tangle ../src/rt_clj/tuples.clj
-   (ns rt-clj.tuples
-     (:import java.lang.Math)
-     (:refer-clojure :exclude [vector vector?]))
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/tuples.clj
+  (ns rt-clj.tuples
+    (:import java.lang.Math)
+    (:refer-clojure :exclude [vector vector?]))
 
 
-   <<tuples_create>>
+  <<tuples_create>>
 
 
-   <<tuples_close>>
+  <<tuples_close>>
 
-   <<tuples_eq>>
+  <<tuples_eq>>
 
-   <<tuples_operations>>
-   #+END_SRC
+  <<tuples_operations>>
 
-   #+BEGIN_SRC clojure :tangle ../test/rt_clj/tuples_test.clj
-   (ns rt-clj.tuples-test
-     (:import java.lang.Math)
-     (:refer-clojure :exclude [vector vector?])
-     (:require [clojure.test :refer :all]
-               [rt-clj.tuples :refer :all]))
+  <<tuples_reflect>>
+  #+END_SRC
 
-   (deftest tuples-test
-     <<tuples_create_test>>
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/tuples_test.clj
+  (ns rt-clj.tuples-test
+    (:import java.lang.Math)
+    (:refer-clojure :exclude [vector vector?])
+    (:require [clojure.test :refer :all]
+              [rt-clj.tuples :refer :all]))
 
-     <<tuples_create_point_vector_test>>
+  (deftest tuples-test
+    <<tuples_create_test>>
 
-     <<tuples_add_sub_test>>
+    <<tuples_create_point_vector_test>>
 
-     <<tuples_neg_mul_div_test>>
+    <<tuples_add_sub_test>>
 
-     <<tuples_mag_test>>
+    <<tuples_neg_mul_div_test>>
 
-     <<tuples_norm_test>>
+    <<tuples_mag_test>>
 
-     <<tuples_dot_cross_test>>)
-   #+END_SRC
+    <<tuples_norm_test>>
+
+    <<tuples_dot_cross_test>>
+
+    <<tuples_reflect_test>>)
+  #+END_SRC

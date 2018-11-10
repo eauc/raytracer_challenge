@@ -11,11 +11,39 @@
   #+NAME: spheres_create
   #+BEGIN_SRC clojure
   (defn sphere
-    ([t]
-     {:transform t
-      :inverse-t (m/inverse t)})
+    ([transform material]
+     (let [inverse-t (m/inverse transform)]
+       {:material material
+        :transform transform
+        :inverse-t inverse-t
+        :trans-inverse-t (m/transpose inverse-t)}))
+    ([transform]
+     (sphere transform (mr/material)))
     ([]
-     (sphere (m/id 4))))
+     (sphere (m/id 4) (mr/material))))
+  #+END_SRC
+
+  Spheres has a transform property.
+
+  #+NAME: spheres_trans_test
+  #+BEGIN_SRC clojure
+  (testing "A sphere's default transformation"
+    (is (= (m/id 4)
+           (:transform (sphere)))))
+
+  (testing "Changing a sphere's transformation"
+    (let [t (tr/translation 2. 3. 4.)
+          s (sphere t)]
+      (:transform s)))
+  #+END_SRC
+
+  Spheres has a material property.
+
+  #+NAME: spheres_material_test
+  #+BEGIN_SRC clojure
+  (testing "A sphere has a default material"
+    (is (= (mr/material)
+           (:material (sphere)))))
   #+END_SRC
 
 * Intersections
@@ -112,22 +140,6 @@
             (i/intersections i2 i1))))))
   #+END_SRC
 
-* Transformations
-
-  Spheres has a transform property.
-
-  #+NAME: spheres_trans_test
-  #+BEGIN_SRC clojure
-  (testing "A sphere's default transformation"
-    (is (= (m/id 4)
-           (:transform (sphere)))))
-
-  (testing "Changing a sphere's transformation"
-    (let [t (tr/translation 2. 3. 4.)
-          s (sphere t)]
-      (:transform s)))
-  #+END_SRC
-
   Transformations of the spheres are applied to the ray when calculating the intersections.
 
   #+NAME: spheres_int_trans_test
@@ -151,6 +163,61 @@
              (count xs)))))
   #+END_SRC
 
+* Normal
+
+  Normal is easy to calculate since the sphere is always centered at the origin.
+
+  #+NAME: spheres_norm_test
+  #+BEGIN_SRC clojure
+  (testing "The normal on a sphere at a point on the x axis"
+    (is (= (t/vector 1. 0. 0.)
+           (normal-at (sphere) (t/point 1. 0. 0.)))))
+
+  (testing "The normal on a sphere at a point on the y axis"
+    (is (= (t/vector 0. 1. 0.)
+           (normal-at (sphere) (t/point 0. 1. 0.)))))
+
+  (testing "The normal on a sphere at a point on the z axis"
+    (is (= (t/vector 0. 0. 1.)
+           (normal-at (sphere) (t/point 0. 0. 1.)))))
+
+  (testing "The normal on a sphere at a non-axial point"
+    (let [p (/ (Math/sqrt 3.) 3.)]
+      (is (= (t/vector p p p)
+             (normal-at (sphere) (t/point p p p))))))
+  #+END_SRC
+
+  But we must also take into account the sphere's transformation.
+
+  #+NAME: spheres_norm_trans_test
+  #+BEGIN_SRC clojure
+  (testing "Computing the normal on a translated sphere"
+    (is (t/eq? (t/vector 0. 0.70711 -0.70711)
+               (normal-at (sphere (tr/translation 0. 1. 0.))
+                          (t/point 0, 1.70711, -0.70711)))))
+
+  (testing "Computing the normal on a scaled sphere"
+    (is (t/eq? (t/vector 0. 0.97014 -0.24254)
+               (normal-at (sphere (tr/scaling 1. 0.5 1.))
+                          (t/point 0, 0.70711, -0.70711)))))
+  #+END_SRC
+
+  To calculate the world-normal, we must :
+  - first transform the intersection point into object-world.
+  - then calculate the normal in object-world easily.
+  - we must then transform this normal back, using the transpose inverse of the transformation matrix of the sphere.
+  - this calculation results in a wrong =w= component, so we just trop it.
+  - the resulting vector is also not normalized anymore, so we normalize the result.
+
+  #+NAME: spheres_norm
+  #+BEGIN_SRC clojure
+  (defn normal-at [{:keys [inverse-t trans-inverse-t]} world-p]
+    (let [object-p (m/mul inverse-t world-p)
+          object-normal (t/sub object-p (t/point 0. 0. 0.))
+          [x y z] (m/mul trans-inverse-t object-normal)]
+      (t/norm (t/vector x y z))))
+  #+END_SRC
+
 * Files                                                            :noexport:
   :PROPERTIES:
   :header-args: :exports none :noweb yes
@@ -159,6 +226,7 @@
   #+BEGIN_SRC clojure :tangle ../src/rt_clj/spheres.clj
   (ns rt-clj.spheres
     (:require [rt-clj.intersections :as i]
+              [rt-clj.materials :as mr]
               [rt-clj.matrices :as m]
               [rt-clj.rays :as r]
               [rt-clj.tuples :as t]))
@@ -167,23 +235,32 @@
   <<spheres_create>>
 
   <<spheres_ray_int>>
+
+  <<spheres_norm>>
   #+END_SRC
 
   #+BEGIN_SRC clojure :tangle ../test/rt_clj/spheres_test.clj
   (ns rt-clj.spheres-test
     (:require [clojure.test :refer :all]
               [rt-clj.spheres :refer :all]
+              [rt-clj.materials :as mr]
               [rt-clj.matrices :as m]
               [rt-clj.rays :as r]
               [rt-clj.transformations :as tr]
               [rt-clj.tuples :as t]))
 
   (deftest spheres-test
-    <<spheres_ray_int_test>>
-
     <<spheres_trans_test>>
 
-    <<spheres_int_trans_test>>)
+    <<spheres_material_test>>
+
+    <<spheres_ray_int_test>>
+
+    <<spheres_int_trans_test>>
+
+    <<spheres_norm_test>>
+
+    <<spheres_norm_trans_test>>)
   #+END_SRC
 
 * Example
