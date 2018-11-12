@@ -141,8 +141,8 @@
 
   The sphere is purple and we will use our material lighting.
 
-  #+BEGIN_SRC clojure :exports code :tangle ../dev/rt_clj/test.clj
-  (ns rt-clj.test
+  #+BEGIN_SRC clojure :exports code :tangle ../dev/rt_clj/sphere_light_example.clj
+  (ns rt-clj.sphere-light-example
     (:require [rt-clj.canvas :as ca]
               [rt-clj.colors :as co]
               [rt-clj.intersections :as in]
