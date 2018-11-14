@@ -1,0 +1,274 @@
+#+TITLE: 10 - Worlds
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+* Creation
+
+  A world store all the objects and lights of a scene.
+
+  For testing purpose we can create a default world with:
+  - to spheres centered at origin with different radii.
+  - a light source a =[-10,10,-10]=
+
+  #+NAME: worlds_create_test
+  #+BEGIN_SRC clojure
+  (testing "Creating a world"
+    (let [w (world)]
+      (is (= []
+             (:objects w)))
+      (is (= []
+             (:lights w)))))
+
+  (testing "The default world"
+    (let [w default-world]
+      (is (= [(l/point-light (t/point -10. 10. -10.) (c/color 1. 1. 1.))]
+             (:lights w)))
+      (is (= [(-> (s/sphere) (assoc :material (-> (m/material)
+                                                  (assoc :color (c/color 0.8 1.0 0.6))
+                                                  (assoc :diffuse 0.7)
+                                                  (assoc :specular 0.2))))
+              (s/sphere (tr/scaling 0.5 0.5 0.5))]
+             (:objects w)))))
+  #+END_SRC
+
+  #+NAME: worlds_create
+  #+BEGIN_SRC clojure
+  (defn world
+    ([os ls]
+     {:objects os
+      :lights ls})
+    ([]
+     (world [] [])))
+
+  (def default-world
+    (world [(-> (s/sphere) (assoc :material (-> (m/material)
+                                                (assoc :color (c/color 0.8 1.0 0.6))
+                                                (assoc :diffuse 0.7)
+                                                (assoc :specular 0.2))))
+            (s/sphere (tr/scaling 0.5 0.5 0.5))]
+           [(l/point-light (t/point -10. 10. -10.) (c/color 1. 1. 1.))]))
+  #+END_SRC
+
+* Intersections with rays
+
+  The =intersect= function on a world should iterate over the list of objects and return all interesections with the ray.
+
+  We return the intersections in sorted order since this will help with some future algo.
+
+  #+NAME: worlds_intersect_test
+  #+BEGIN_SRC clojure
+  (testing "Intersect a world with a ray"
+    (let [w default-world
+          ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
+          xs (intersect w ray)]
+      (is (= 4
+             (count xs)))
+      (is (= 4.
+             (:t (first xs))))
+      (is (= 4.5
+             (:t (second xs))))
+      (is (= 5.5
+             (:t (nth xs 2))))
+      (is (= 6.
+             (:t (nth xs 3))))))
+  #+END_SRC
+
+  #+NAME: worlds_intersect
+  #+BEGIN_SRC clojure
+  (defn intersect [w ray]
+    (->> (:objects w)
+         (map #(s/intersect % ray))
+         flatten
+         (sort-by :t)
+         vec))
+  #+END_SRC
+* Hits
+
+  To help with the ray tracer computations, the =prepare-hit= function pre-computes some values and add them to an intersection:
+  - the point in world space where the hit occured.
+  - the eye vector (pointing towards the camera).
+  - the normal of the object at the intersection point.
+  - whether the intersection occurs on the inside of the object, in which case the normal is inverted.
+
+  #+NAME: worlds_prep_test
+  #+BEGIN_SRC clojure
+  (testing "Precomputing the state of an intersection"
+    (let [ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
+          shape (s/sphere)
+          hit (i/intersection 4 shape)
+          p (prepare-hit hit ray)]
+      (is (= (t/point 0. 0. -1.)
+             (:point p)))
+      (is (= (t/vector 0. 0. -1.)
+             (:eyev p)))
+      (is (= (t/vector 0. 0. -1.)
+             (:normalv p)))))
+
+  (testing "An intersection occurs on the outside"
+    (let [ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
+          shape (s/sphere)
+          hit (i/intersection 1. shape)
+          p (prepare-hit hit ray)]
+      (is (= false
+             (:inside? p)))))
+
+  (testing "An intersection occurs on the inside"
+    (let [ray (r/ray (t/point 0. 0. 0.) (t/vector 0. 0. 1.))
+          shape (s/sphere)
+          hit (i/intersection 1. shape)
+          p (prepare-hit hit ray)]
+      (is (= (t/point 0. 0. 1.)
+             (:point p)))
+      (is (= (t/vector 0. 0. -1.)
+             (:eyev p)))
+      (is (= true
+             (:inside? p)))
+      (is (= (t/vector 0. 0. -1.)
+             (:normalv p)))))
+  #+END_SRC
+
+  #+NAME: worlds_prep
+  #+BEGIN_SRC clojure
+  (defn prepare-hit [i ray]
+    (let [point (r/pos ray (:t i))
+          normalv (s/normal (:object i) point)
+          eyev (t/sub t/zerov (:direction ray))
+          inside? (< (t/dot normalv eyev) 0)]
+      (-> i
+          (assoc :point point
+                 :eyev eyev
+                 :normalv (if inside? (t/sub t/zerov normalv) normalv)
+                 :inside? inside?))))
+  #+END_SRC
+
+* Shading
+
+  We can calculate the shading of an object in the world, from a prepared hit point.
+
+  #+NAME: worlds_shade_test
+  #+BEGIN_SRC clojure
+    (testing "Shading an intersection"
+      (let [w default-world
+            ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
+            shape (first (:objects w))
+            hit (prepare-hit (i/intersection 4. shape) ray)]
+        (is (t/eq? (c/color 0.38066, 0.47583, 0.2855)
+                   (shade-hit w hit)))))
+
+    (testing "Shading an intersection from the inside"
+      (let [w (assoc default-world
+                     :lights [(l/point-light (t/point 0. 0.25 0.) (c/color 1. 1. 1.))])
+            ray (r/ray t/origin (vector 0. 0. 1.))
+            shape (second (:objects w))
+            hit (prepare-hit (i/intersection 0.5 shape) ray)]
+        (is (t/eq? (c/color 0.90498 0.90498 0.90498)
+                   (shade-hit w hit)))))
+  #+END_SRC
+
+  #+NAME: worlds_shade
+  #+BEGIN_SRC clojure
+  (defn shade-hit [w h]
+    (reduce
+      #(c/add %1 (m/lighting (get-in h [:object :material])
+                             %2
+                             (:point h) (:eyev h) (:normalv h)))
+      (c/color 0. 0. 0.)
+      (:lights w)))
+  #+END_SRC
+
+* Color
+
+  Different cases:
+  - when the ray misses all objects, returns black.
+
+  #+NAME: worlds_color_test
+  #+BEGIN_SRC clojure
+  (testing "The color when a ray misses"
+    (let [w default-world
+          ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 1. 0.))]
+      (is (= (c/color 0. 0. 0.0)
+             (color w ray)))))
+
+  (testing "The color when a ray hits"
+    (let [w default-world
+          ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))]
+      (is (t/eq? (c/color 0.38066 0.47583 0.2855)
+                 (color w ray)))))
+
+  (testing "The color with an intersection behind the ray"
+    (let [w (-> default-world
+                (assoc-in [:objects 0 :material :ambient] 1)
+                (update-in [:objects 1 :material] assoc :ambient 1 :diffuse 0))
+          ray (r/ray (t/point 0. 0. -0.75) (t/vector 0. 0. 1.))]
+      (is (= (get-in w [:objects 1 :material :color])
+             (color w ray)))))
+  #+END_SRC
+
+  #+NAME: worlds_color
+  #+BEGIN_SRC clojure
+  (defn color [w ray]
+    (let [xs (intersect w ray)
+          hit? (i/hit xs)]
+      (if (not hit?)
+        c/black
+        (shade-hit w (prepare-hit hit? ray)))))
+  #+END_SRC
+
+* Files                                                           :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/worlds.clj
+  (ns rt-clj.worlds
+    (:require [rt-clj.colors :as c]
+              [rt-clj.intersections :as i]
+              [rt-clj.lights :as l]
+              [rt-clj.materials :as m]
+              [rt-clj.rays :as r]
+              [rt-clj.spheres :as s]
+              [rt-clj.transformations :as tr]
+              [rt-clj.tuples :as t]))
+
+
+  <<worlds_create>>
+
+
+  <<worlds_intersect>>
+
+
+  <<worlds_prep>>
+
+
+  <<worlds_shade>>
+
+
+  <<worlds_color>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/worlds_test.clj
+  (ns rt-clj.worlds-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.worlds :refer :all]
+              [rt-clj.colors :as c]
+              [rt-clj.intersections :as i]
+              [rt-clj.lights :as l]
+              [rt-clj.materials :as m]
+              [rt-clj.rays :as r]
+              [rt-clj.spheres :as s]
+              [rt-clj.transformations :as tr]
+              [rt-clj.tuples :as t]))
+
+  (deftest worlds-test
+    <<worlds_create_test>>
+
+    <<worlds_intersect_test>>
+
+    <<worlds_shade_test>>
+
+    <<worlds_prep_test>>
+
+    <<worlds_color_test>>)
+  #+END_SRC

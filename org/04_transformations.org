@@ -181,6 +181,63 @@
                  (m/mul t (m/mul s (m/mul r p)))))))
   #+END_SRC
 
+* View transformation
+
+  A view is defined by:
+  - a point =from= representing the origin of the ray.
+  - a point =to= representing the center of the view.
+  - a vector =up= representing the vertical direction.
+
+  To calculate the view transformation we must:
+  - calculate the forward vector =from -> up=.
+  - calculate the left direction vector: in a left hand referential this is =forward x up=
+  - the true up vector is =left x forward= - we can pass any vector vaguely pointing up, the transformation will calculate the correct =up= vector for a left hand orthogonal referential.
+  - the orientation matrix is computed from =left/forward/true-up=.
+  - we then translate the result with the invert of =from=, which "pushes" the world away from the view.
+
+  #+NAME: trans_view_test
+  #+BEGIN_SRC clojure
+  (testing "The transformation matrix for the default orientation"
+    (is (= (m/id 4)
+           (view (t/point 0. 0. 0.)
+                 (t/point 0. 0. -1.)
+                 (t/vector 0. 1. 0.)))))
+
+  (testing "A view transformation matrix looking in positive z direction"
+    (is (= (scaling -1. 1. -1.)
+           (view (t/point 0. 0. 0.)
+                 (t/point 0. 0. 1.)
+                 (t/vector 0. 1. 0.)))))
+
+  (testing "The view transformation moves the world"
+    (is (= (translation 0. 0. -8.)
+           (view (t/point 0. 0. 8.)
+                 (t/point 0. 0. 0.)
+                 (t/vector 0. 1. 0.)))))
+
+  (testing "An arbitrary view transformation"
+    (is (m/eq? (m/matrix [[-0.50709 0.50709 0.67612 -2.36643]
+                          [0.76772 0.60609 0.12122 -2.82843]
+                          [-0.35857 0.59761 -0.71714 0.00000]
+                          [0.00000 0.00000 0.00000 1.00000]])
+               (view (t/point 1. 3. 2.)
+                     (t/point 4. -2. 8.)
+                     (t/vector 1. 1. 0.)))))
+  #+END_SRC
+
+  #+NAME: trans_view
+  #+BEGIN_SRC clojure
+  (defn view [from to up]
+    (let [forward (t/norm (t/sub to from))
+          left (t/cross forward (t/norm up))
+          true-up (t/cross left forward)
+          orientation (m/matrix [[(t/x left) (t/y left) (t/z left) 0.]
+                                 [(t/x true-up) (t/y true-up) (t/z true-up) 0.]
+                                 [(- (t/x forward)) (- (t/y forward)) (- (t/z forward)) 0.]
+                                 [0. 0. 0. 1.]])]
+      (m/mul orientation (translation (- (t/x from)) (- (t/y from)) (- (t/z from))))))
+  #+END_SRC
+
 * Files                                                            :noexport:
   :PROPERTIES:
   :header-args: :exports none :noweb yes
@@ -189,7 +246,8 @@
    #+BEGIN_SRC clojure :tangle ../src/rt_clj/transformations.clj
    (ns rt-clj.transformations
      (:import java.lang.Math)
-     (:require [rt-clj.matrices :as m]))
+     (:require [rt-clj.matrices :as m]
+               [rt-clj.tuples :as t]))
 
 
    <<trans_tl>>
@@ -199,6 +257,9 @@
    <<trans_rt>>
 
    <<trans_sh>>
+
+
+   <<trans_view>>
    #+END_SRC
 
   #+BEGIN_SRC clojure :tangle ../test/rt_clj/transformations_test.clj
@@ -217,5 +278,7 @@
 
     <<trans_sh_test>>
 
-    <<trans_seq_test>>)
+    <<trans_seq_test>>
+
+    <<trans_view_test>>)
   #+END_SRC

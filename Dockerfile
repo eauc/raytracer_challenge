@@ -1,7 +1,7 @@
 FROM eauc/emacs-org as src
 
 WORKDIR /app
-RUN mkdir -p doc samples src/rt_clj test/rt_clj
+RUN mkdir -p dev/rt_clj doc samples src/rt_clj test/rt_clj
 COPY ./org ./org
 RUN emacs --batch -l "/root/.emacs.d/init.el" \
     --eval "(tangle-all \"org\")" \

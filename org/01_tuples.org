@@ -93,6 +93,10 @@
 
   (defn vector [x y z]
     (tuple x y z 0.0))
+
+  (def origin (point 0. 0. 0.))
+
+  (def zerov (vector 0. 0. 0.))
   #+END_SRC
 
 * Operations

@@ -187,15 +187,15 @@
    #+NAME: matrices_id_test
    #+BEGIN_SRC clojure
    (testing "Multiplying a matrix by the identity"
-     (let [m (matrix [[0 1 2 4]
-                      [1 2 4 8]
-                      [2 4 8 16]
-                      [4 8 16 32]])]
+     (let [m (matrix [[0. 1. 2. 4.]
+                      [1. 2. 4. 8.]
+                      [2. 4. 8. 16.]
+                      [4. 8. 16. 32.]])]
        (is (= m
               (mul m (id 4))))))
 
    (testing "Multiplying identity by a tuple"
-     (let [a (t/tuple 1 2 3 4)]
+     (let [a (t/tuple 1. 2. 3. 4.)]
        (is (= a
               (mul (id 4) a)))))
    #+END_SRC
@@ -203,7 +203,7 @@
    #+NAME: matrices_id
    #+BEGIN_SRC clojure
    (defn id [n]
-     (mapv #(vec (concat (repeat % 0) [1] (repeat (dec (- n %)) 0))) (range n)))
+     (mapv #(vec (concat (repeat % 0.) [1.] (repeat (dec (- n %)) 0.))) (range n)))
    #+END_SRC
 
 * Inversion

@@ -90,7 +90,7 @@
       (if (> 0 light-dot-normal)
         ambient
         (let [diffuse (c/mul effective-color (* (:diffuse material) light-dot-normal))
-              reflectv (t/reflect (t/sub (t/vector 0. 0. 0.) lightv) normalv)
+              reflectv (t/reflect (t/sub t/zerov lightv) normalv)
               reflect-dot-eyev' (t/dot reflectv eyev)
               reflect-dot-eyev (Math/pow reflect-dot-eyev' (:shininess material))
               amb-dif (c/add ambient diffuse)]
@@ -178,7 +178,7 @@
                     (if (nil? hit?)
                       miss-col
                       (let [position (ra/pos ray (:t hit?))
-                            normal (sp/normal-at s position)]
+                            normal (sp/normal s position)]
                         (mr/lighting m l position ray-d normal)))))
           pixs (mapv (fn[i]
                        (mapv (fn [j]

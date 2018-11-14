@@ -24,6 +24,8 @@
   #+BEGIN_SRC clojure
   (def color t/tuple)
 
+  (def black (color 0. 0. 0.))
+
   (def red t/x)
 
   (def green t/y)
