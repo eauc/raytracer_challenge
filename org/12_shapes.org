@@ -1,0 +1,56 @@
+#+TITLE: 12 - Shapes
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+* Creation
+
+  #+NAME: shapes_protocol
+  #+BEGIN_SRC clojure
+  (defprotocol Shape
+    (intersect [sh ray] "Computes intersections of the shape with the ray")
+    (normal [sh world-p] "Computes the normal of the shape at world point"))
+  #+END_SRC
+
+* Utilities
+
+  To calculate the world-intersect, we must first transform the ray in the object coordinates.
+
+  To calculate the world-normal, we must :
+  - first transform the intersection point into object-world.
+  - then calculate the local-normal in object-world easily.
+  - we must then transform this normal back, using the transpose inverse of the transformation matrix of the object.
+  - this calculation results in a wrong =w= component, so we just trop it.
+  - the resulting vector is also not normalized anymore, so we normalize the result.
+
+  #+NAME: shapes_utilities
+  #+BEGIN_SRC clojure
+  (defn intersect' [{:keys [inverse-t] :as sh} ra local-intersect]
+    (let [local-ray (r/transform ra inverse-t)]
+      (local-intersect sh local-ray)))
+
+  (defn normal' [{:keys [inverse-t trans-inverse-t] :as sh} world-p local-normal]
+    (let [object-p (m/mul inverse-t world-p)
+          object-normal (local-normal sh object-p)
+          [x y z] (m/mul trans-inverse-t object-normal)]
+      (t/norm (t/vector x y z))))
+  #+END_SRC
+
+* Files                                                           :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/shapes.clj
+  (ns rt-clj.shapes
+    (:require [rt-clj.matrices :as m]
+              [rt-clj.rays :as r]
+              [rt-clj.tuples :as t]))
+
+
+  <<shapes_protocol>>
+
+
+  <<shapes_utilities>>
+  #+END_SRC

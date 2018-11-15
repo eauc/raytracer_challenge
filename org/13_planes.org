@@ -1,0 +1,230 @@
+#+TITLE: 13 - Planes
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+* Creation
+
+  Planes are records implementing Shape protocol.
+
+  #+NAME: planes_create
+  #+BEGIN_SRC clojure
+  (defrecord Plane [material transform inverse-t trans-inverse-t]
+    sh/Shape
+    (sh/intersect [sh ray]
+      (sh/intersect' sh ray local-intersect))
+    (sh/normal [sh world-p]
+      (sh/normal' sh world-p local-normal)))
+
+  (defn plane
+    ([transform material]
+     (let [inverse-t (m/inverse transform)]
+       (map->Plane
+         {:material material
+          :transform transform
+          :inverse-t inverse-t
+          :trans-inverse-t (m/transpose inverse-t)})))
+    ([transform]
+     (plane transform (mr/material)))
+    ([]
+     (plane (m/id 4) (mr/material))))
+  #+END_SRC
+
+  Planes has a transform property.
+
+  #+NAME: planes_trans_test
+  #+BEGIN_SRC clojure
+  (testing "A plane's default transformation"
+    (is (= (m/id 4)
+           (:transform (plane)))))
+
+  (testing "Changing a plane's transformation"
+    (let [t (tr/translation 2. 3. 4.)
+          s (plane t)]
+      (:transform s)))
+  #+END_SRC
+
+  Planes has a material property.
+
+  #+NAME: planes_material_test
+  #+BEGIN_SRC clojure
+  (testing "A plane has a default material"
+    (is (= (mr/material)
+           (:material (plane)))))
+  #+END_SRC
+
+* Intersections
+
+  There are 4 cases to consider:
+  - the ray is parallel to the plane: no hit.
+  - the ray is coplanar to the plane: no hit (planes are infinitely thins).
+  - the ray origin is above the plane.
+  - the ray origin is below the plane.
+
+  #+NAME: planes_ray_int_test
+  #+BEGIN_SRC clojure
+  (testing "Intersect with a ray parallel to the plane"
+    (is (= []
+           (local-intersect
+             (plane)
+             (r/ray (t/point 0. 10. 0.) (t/vector 0. 0. 1.))))))
+
+  (testing "Intersect with a coplanar plane"
+    (is (= []
+           (local-intersect
+             (plane)
+             (r/ray (t/point 0. 0. 0.) (t/vector 0. 0. 1.))))))
+
+  (testing "A ray intersecting a plane from above"
+    (let [xs (local-intersect
+               (plane)
+               (r/ray (t/point 0. 1. 0.) (t/vector 0. -1. 0.)))]
+      (is (= 1
+             (count xs)))
+      (is (= 1.
+             (:t (first xs))))
+      (is (= (plane)
+             (:object (first xs))))))
+
+  (testing "A ray intersecting a plane from below"
+    (let [xs (local-intersect
+               (plane)
+               (r/ray (t/point 0. -1. 0.) (t/vector 0. 1. 0.)))]
+      (is (= 1
+             (count xs)))
+      (is (= 1.
+             (:t (first xs))))
+      (is (= (plane)
+             (:object (first xs))))))
+  #+END_SRC
+
+  #+NAME: planes_ray_int
+  #+BEGIN_SRC clojure
+  (defn local-intersect [p {:keys [origin direction]}]
+    (if (t/close? 0. (t/y direction))
+      []
+      (let [t (- (/ (t/y origin) (t/y direction)))]
+        [(i/intersection t p)])))
+  #+END_SRC
+
+* Normal
+
+  The local-normal of plane is always =[0 1 0]=.
+
+  #+NAME: planes_norm_test
+  #+BEGIN_SRC clojure
+  (testing "The normal of a plane is constant everywhere"
+    (is (= (t/vector 0. 1. 0.)
+           (local-normal (plane) (t/point 0. 0. 0.))))
+    (is (= (t/vector 0. 1. 0.)
+           (local-normal (plane) (t/point 10. 0. -10.))))
+    (is (= (t/vector 0. 1. 0.)
+           (local-normal (plane) (t/point -5. 0. 150.)))))
+  #+END_SRC
+
+  #+NAME: planes_norm
+  #+BEGIN_SRC clojure
+  (defn local-normal [_ _]
+    (t/vector 0. 1. 0.))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/planes.clj
+  (ns rt-clj.planes
+    (:require [rt-clj.intersections :as i]
+              [rt-clj.materials :as mr]
+              [rt-clj.matrices :as m]
+              [rt-clj.rays :as r]
+              [rt-clj.shapes :as sh]
+              [rt-clj.tuples :as t]))
+
+
+  <<planes_ray_int>>
+
+
+  <<planes_norm>>
+
+
+  <<planes_create>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/planes_test.clj
+  (ns rt-clj.planes-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.planes :refer :all]
+              [rt-clj.intersections :as i]
+              [rt-clj.materials :as mr]
+              [rt-clj.matrices :as m]
+              [rt-clj.rays :as r]
+              [rt-clj.shapes :as sh]
+              [rt-clj.transformations :as tr]
+              [rt-clj.tuples :as t]))
+
+  (deftest planes-test
+    <<planes_trans_test>>
+
+    <<planes_material_test>>
+
+    <<planes_ray_int_test>>
+
+    <<planes_norm_test>>)
+  #+END_SRC
+
+* Example
+
+  #+BEGIN_SRC clojure :exports code :tangle ../dev/rt_clj/planes_spheres_example.clj
+  (ns rt-clj.planes-spheres-example
+    (:require [rt-clj.cameras :as cm]
+              [rt-clj.canvas :as ca]
+              [rt-clj.colors :as co]
+              [rt-clj.intersections :as in]
+              [rt-clj.lights :as li]
+              [rt-clj.matrices :as ma]
+              [rt-clj.materials :as mr]
+              [rt-clj.planes :as pl]
+              [rt-clj.rays :as ra]
+              [rt-clj.spheres :as sp]
+              [rt-clj.transformations :as tr]
+              [rt-clj.tuples :as tu]
+              [rt-clj.worlds :as wo]))
+
+  (comment
+    (let [w-material (-> (mr/material)
+                         (assoc :color (co/color 1. 0.9 0.9)
+                                :specular 0.))
+          floor (pl/plane (ma/id 4) w-material)
+          wall (pl/plane (ma/mul
+                           (tr/translation 0. 0. 5.)
+                           (tr/rotation-x (/ Math/PI 2)))
+                         w-material)
+          middle (sp/sphere (tr/translation -0.5 1. 0.5)
+                            (-> (mr/material)
+                                (assoc :color (co/color 0.1 1. 0.5)
+                                       :diffuse 0.7
+                                       :specular 0.3)))
+          right (sp/sphere (ma/mul (tr/translation 1.5 0.5 -0.5)
+                                   (tr/scaling 0.5 0.5 0.5))
+                           (-> (mr/material)
+                               (assoc :color (co/color 0.5 1. 0.1)
+                                      :diffuse 0.7
+                                      :specular 0.3)))
+          light (li/point-light (tu/point -10. 10. -10.) (co/color 1. 1. 1.))
+          world (wo/world [floor wall
+                           middle right]
+                          [light])
+          cam (cm/camera 400 200 (/ Math/PI 3)
+                         (tr/view (tu/point 0. 1.5 -5.)
+                                  (tu/point 0. 1. 0.)
+                                  (tu/vector 0. 1. 0.)))
+          cv (cm/render cam world)]
+      ;; print the PPM file
+      (spit "./samples/planes_spheres_example.ppm"
+            (clojure.string/join "\n" (ca/ppm-rows cv)))))
+  #+END_SRC
+
+  [[file:../samples/planes_spheres_example.png]]

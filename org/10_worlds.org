@@ -79,7 +79,7 @@
   #+BEGIN_SRC clojure
   (defn intersect [w ray]
     (->> (:objects w)
-         (map #(s/intersect % ray))
+         (map #(sh/intersect % ray))
          flatten
          (sort-by :t)
          vec))
@@ -142,7 +142,7 @@
   #+BEGIN_SRC clojure
   (defn prepare-hit [i ray]
     (let [point (r/pos ray (:t i))
-          normalv (s/normal (:object i) point)
+          normalv (sh/normal (:object i) point)
           eyev (t/sub t/zerov (:direction ray))
           inside? (< (t/dot normalv eyev) 0)]
       (-> i
@@ -284,6 +284,7 @@
               [rt-clj.materials :as m]
               [rt-clj.rays :as r]
               [rt-clj.spheres :as s]
+              [rt-clj.shapes :as sh]
               [rt-clj.transformations :as tr]
               [rt-clj.tuples :as t]))
 
