@@ -237,7 +237,7 @@
           world (wo/world [floor left-wall right-wall
                            middle left right]
                           [light])
-          cam (cm/camera 200 100 (/ Math/PI 3)
+          cam (cm/camera 400 200 (/ Math/PI 3)
                          (tr/view (tu/point 0. 1.5 -5.)
                                   (tu/point 0. 1. 0.)
                                   (tu/vector 0. 1. 0.)))

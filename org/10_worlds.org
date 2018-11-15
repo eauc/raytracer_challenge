@@ -92,6 +92,8 @@
   - the normal of the object at the intersection point.
   - whether the intersection occurs on the inside of the object, in which case the normal is inverted.
 
+  To avoid acne syndrome, the computation should slightly displace the hit point (by epsilon) toward the outside of the object.
+
   #+NAME: worlds_prep_test
   #+BEGIN_SRC clojure
   (testing "Precomputing the state of an intersection"
@@ -99,12 +101,12 @@
           shape (s/sphere)
           hit (i/intersection 4 shape)
           p (prepare-hit hit ray)]
-      (is (= (t/point 0. 0. -1.)
-             (:point p)))
-      (is (= (t/vector 0. 0. -1.)
-             (:eyev p)))
-      (is (= (t/vector 0. 0. -1.)
-             (:normalv p)))))
+      (is (t/eq? (t/point 0. 0. -1.00001)
+                 (:point p)))
+      (is (t/eq? (t/vector 0. 0. -1.)
+                 (:eyev p)))
+      (is (t/eq? (t/vector 0. 0. -1.)
+                 (:normalv p)))))
 
   (testing "An intersection occurs on the outside"
     (let [ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
@@ -119,14 +121,21 @@
           shape (s/sphere)
           hit (i/intersection 1. shape)
           p (prepare-hit hit ray)]
-      (is (= (t/point 0. 0. 1.)
-             (:point p)))
-      (is (= (t/vector 0. 0. -1.)
-             (:eyev p)))
+      (is (t/eq? (t/point 0. 0. 1.00001)
+                 (:point p)))
+      (is (t/eq? (t/vector 0. 0. -1.)
+                 (:eyev p)))
       (is (= true
              (:inside? p)))
-      (is (= (t/vector 0. 0. -1.)
-             (:normalv p)))))
+      (is (t/eq? (t/vector 0. 0. -1.)
+                 (:normalv p)))))
+
+  (testing "The hit should offset the point"
+    (let [ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
+          shape (s/sphere (tr/translation 0. 0. 1.))
+          h (i/intersection 5. shape)]
+      (is (> (- (/ t/epsilon 2))
+             (t/z (:point (prepare-hit h ray)))))))
   #+END_SRC
 
   #+NAME: worlds_prep
@@ -137,10 +146,46 @@
           eyev (t/sub t/zerov (:direction ray))
           inside? (< (t/dot normalv eyev) 0)]
       (-> i
-          (assoc :point point
+          (assoc :point (t/add point (t/mul normalv t/epsilon))
                  :eyev eyev
                  :normalv (if inside? (t/sub t/zerov normalv) normalv)
                  :inside? inside?))))
+  #+END_SRC
+
+* Shadows
+
+  A point is shadowed with regards to a light, if there is any object between the point and the light.
+
+  We can compute this by casting a ray from the point to the light, and see if there is a hit closer than the distance to the light.
+
+  #+NAME: worlds_shadow_test
+  #+BEGIN_SRC clojure
+  (let [light (get-in default-world [:lights 0])]
+    (testing "There is no shadow when nothing is collinear with point and light"
+      (is (= false
+             (shadowed? default-world (t/point 0. 10. 0.) light))))
+
+    (testing "The shadow when an object is between the point and the light"
+      (is (= true
+             (shadowed? default-world (t/point 10. -10. 10.) light))))
+
+    (testing "There is no shadow when an object is behind the light"
+      (is (= false
+             (shadowed? default-world (t/point -20. 20. -20.) light))))
+
+    (testing "There is no shadow when an object is behind the point"
+      (is (= false
+             (shadowed? default-world (t/point -2. 2. -2.) light)))))
+  #+END_SRC
+
+  #+NAME: worlds_shadow
+  #+BEGIN_SRC clojure
+  (defn shadowed? [w p l]
+    (let [p->l (t/sub (:position l) p)
+          d (t/mag p->l)
+          ray (r/ray p (t/norm p->l))
+          hit? (i/hit (intersect w ray))]
+      (boolean (and hit? (> d (:t hit?))))))
   #+END_SRC
 
 * Shading
@@ -149,22 +194,31 @@
 
   #+NAME: worlds_shade_test
   #+BEGIN_SRC clojure
-    (testing "Shading an intersection"
-      (let [w default-world
-            ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
-            shape (first (:objects w))
-            hit (prepare-hit (i/intersection 4. shape) ray)]
-        (is (t/eq? (c/color 0.38066, 0.47583, 0.2855)
-                   (shade-hit w hit)))))
+  (testing "Shading an intersection"
+    (let [w default-world
+          ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
+          shape (first (:objects w))
+          hit (prepare-hit (i/intersection 4. shape) ray)]
+      (is (t/eq? (c/color 0.38066, 0.47583, 0.2855)
+                 (shade-hit w hit)))))
 
-    (testing "Shading an intersection from the inside"
-      (let [w (assoc default-world
-                     :lights [(l/point-light (t/point 0. 0.25 0.) (c/color 1. 1. 1.))])
-            ray (r/ray t/origin (vector 0. 0. 1.))
-            shape (second (:objects w))
-            hit (prepare-hit (i/intersection 0.5 shape) ray)]
-        (is (t/eq? (c/color 0.90498 0.90498 0.90498)
-                   (shade-hit w hit)))))
+  (testing "Shading an intersection from the inside"
+    (let [w (assoc default-world
+                   :lights [(l/point-light (t/point 0. 0.25 0.) (c/color 1. 1. 1.))])
+          ray (r/ray t/origin (vector 0. 0. 1.))
+          shape (second (:objects w))
+          hit (prepare-hit (i/intersection 0.5 shape) ray)]
+      (is (t/eq? (c/color 0.90498 0.90498 0.90498)
+                 (shade-hit w hit)))))
+
+  (testing "Shading an intersection in shadow"
+    (let [s2 (s/sphere (tr/translation 0. 0. 10.))
+          w (world [(s/sphere) s2]
+                   [(l/point-light (t/point 0. 0. -10.) (c/color 1. 1. 1.))])
+          ray (r/ray (t/point 0. 0. 5.) (t/vector 0. 0. 1.))
+          h (prepare-hit (i/intersection 4. s2) ray)]
+      (is (= (c/color 0.1, 0.1, 0.1)
+             (shade-hit w h)))))
   #+END_SRC
 
   #+NAME: worlds_shade
@@ -173,7 +227,8 @@
     (reduce
       #(c/add %1 (m/lighting (get-in h [:object :material])
                              %2
-                             (:point h) (:eyev h) (:normalv h)))
+                             (:point h) (:eyev h) (:normalv h)
+                             (shadowed? w (:point h) %2)))
       (c/color 0. 0. 0.)
       (:lights w)))
   #+END_SRC
@@ -242,6 +297,9 @@
   <<worlds_prep>>
 
 
+  <<worlds_shadow>>
+
+
   <<worlds_shade>>
 
 
@@ -270,5 +328,7 @@
 
     <<worlds_prep_test>>
 
-    <<worlds_color_test>>)
+    <<worlds_color_test>>
+
+    <<worlds_shadow_test>>)
   #+END_SRC
