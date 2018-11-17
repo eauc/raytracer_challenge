@@ -1,0 +1,345 @@
+#+TITLE: 14 - Patterns
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+* Generic Patterns
+
+  Objects can have patterns and both can have transformations.
+
+  #+NAME: pats_generic_test
+  #+BEGIN_SRC clojure
+  (testing "A pattern with an object transformation"
+    (let [shape (s/sphere (tr/scaling 2. 2. 2.))
+          pattern (test-pattern)]
+      (is (= (c/color 1. 1.5 2.)
+             (pattern-at-shape pattern shape (t/point 2. 3. 4.))))))
+
+  (testing "A pattern with a pattern transformation"
+    (let [shape (s/sphere)
+          pattern (test-pattern (tr/scaling 2. 2. 2.))]
+      (is (= (c/color 1. 1.5 2.)
+             (pattern-at-shape pattern shape (t/point 2. 3. 4.))))))
+
+  (testing "A pattern with both an object and a pattern transformation"
+    (let [shape (s/sphere (tr/scaling 2. 2. 2.))
+          pattern (test-pattern (tr/translation 0.5 1. 1.5))]
+      (is (= (c/color 0.75 0.5 0.25)
+             (pattern-at-shape pattern shape (t/point 2.5 3. 3.5))))))
+  #+END_SRC
+
+  #+NAME: pats_generic
+  #+BEGIN_SRC clojure
+  (defprotocol Pattern
+    (pattern-at [pattern point] "pattern color at point"))
+
+  (defn pattern-at-shape [{p-inverse-t :inverse-t :as pattern}
+                          {s-inverse-t :inverse-t :as shape}
+                          w-point]
+    (let [o-point (m/mul s-inverse-t w-point)
+          p-point (m/mul p-inverse-t o-point)]
+      (pattern-at pattern p-point)))
+  #+END_SRC
+
+* Test Pattern
+
+  We need a test pattern to test our protocol.
+  Let's define pattern that just returns the point's coordinates as a color.
+
+  #+NAME: pats_test_pattern
+  #+BEGIN_SRC clojure
+  (defrecord TestPattern [transform inverse-t]
+    Pattern
+    (pattern-at [pattern [x y z]]
+      (c/color x y z)))
+
+  (defn test-pattern
+    ([transform]
+     (map->TestPattern
+       {:transform transform
+        :inverse-t (m/inverse transform)}))
+    ([]
+     (test-pattern (m/id 4))))
+  #+END_SRC
+
+* Stripes
+
+  [[file:../samples/patterns_stripes_example.png]]
+
+  As the x coordinate changes, the Stripes pattern alternates between the two colors.
+  The other two dimensions, y and z , have no effect on it.
+
+  #+NAME: pats_stripes_test
+  #+BEGIN_SRC clojure
+  (testing "A stripe pattern is constant in y"
+    (let [pattern (stripes c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 1. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 2. 0.))))))
+
+  (testing "A stripe pattern is constant in z"
+    (let [pattern (stripes c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 1.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 2.))))))
+
+  (testing "A stripe pattern alternates in x"
+    (let [pattern (stripes c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0.9 0. 0.))))
+      (is (= c/black
+             (pattern-at pattern (t/point 1.0 0. 0.))))
+      (is (= c/black
+             (pattern-at pattern (t/point -0.1 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point -1. 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point -1.1 0. 0.))))))
+  #+END_SRC
+
+  #+NAME: pats_stripes
+  #+BEGIN_SRC clojure
+  (defrecord Stripes [a b transform inverse-t]
+    Pattern
+    (pattern-at [{:keys [a b]} [x]]
+      (if (<= 0 x)
+        (if (= 1 (mod (int x) 2)) b a)
+        (if (= 0 (mod (- (int x)) 2)) b a))))
+
+  (defn stripes
+    ([a b transform]
+     (map->Stripes
+       {:a a :b b
+        :transform transform
+        :inverse-t (m/inverse transform)}))
+    ([a b]
+     (stripes a b (m/id 4))))
+  #+END_SRC
+
+  #+NAME: pats_stripes_shape_test
+  #+BEGIN_SRC clojure
+  (testing "Stripes with an object transformation"
+    (let [object (s/sphere (tr/scaling 2. 2. 2.))
+          pattern (stripes c/white c/black)]
+      (is (= c/white
+             (pattern-at-shape pattern object (t/point 1.5 0. 0.))))))
+
+  (testing "Stripes with a pattern transformation"
+    (let [object (s/sphere)
+          pattern (stripes c/white c/black (tr/scaling 2. 2. 2.))]
+      (is (= c/white
+             (pattern-at-shape pattern object (t/point 1.5 0. 0.))))))
+
+  (testing "Stripes with both an object and a pattern transformation"
+    (let [object (s/sphere (tr/scaling 2. 2. 2.))
+          pattern (stripes c/white c/black (tr/translation 0.5 0. 0.))]
+      (is (= c/white
+             (pattern-at-shape pattern object (t/point 2.5 0. 0.))))))
+  #+END_SRC
+
+* Gradient
+
+  [[file:../samples/patterns_gradient_example.png]]
+
+  The Gradient pattern returns a blend of the two colors, linearly interpolating from one to the other as the x coordinate changes.
+
+  #+NAME: pats_gradient_test
+  #+BEGIN_SRC clojure
+  (testing "A gradient linearly interpolates between colors"
+    (let [pattern (gradient c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= (c/color 0.75 0.75 0.75)
+             (pattern-at pattern (t/point 0.25 0. 0.))))
+      (is (= (c/color 0.5 0.5 0.5)
+             (pattern-at pattern (t/point 0.5 0. 0.))))
+      (is (= (c/color 0.25 0.25 0.25)
+             (pattern-at pattern (t/point 0.75 0. 0.))))))
+  #+END_SRC
+
+  #+NAME: pats_gradient
+  #+BEGIN_SRC clojure
+  (defrecord Gradient [a b-a transform inverse-t]
+    Pattern
+    (pattern-at [{:keys [a b-a]} [x]]
+      (c/add a (c/mul b-a (- x (Math/floor x))))))
+
+  (defn gradient
+    ([a b transform]
+     (map->Gradient
+       {:a a :b-a (c/sub b a)
+        :transform transform
+        :inverse-t (m/inverse transform)}))
+    ([a b]
+     (gradient a b (m/id 4))))
+  #+END_SRC
+
+* Rings
+
+  [[file:../samples/patterns_rings_example.png]]
+
+  A ring pattern depends on two dimensions, x and z, to decide which color to return.
+  It tests the distance of the point in both x and z, which results in this pattern of concentric circles.
+
+  #+NAME: pats_rings_test
+  #+BEGIN_SRC clojure
+  (testing "A ring should extend in both x and z"
+    (let [pattern (rings c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= c/black
+             (pattern-at pattern (t/point 1. 0. 0.))))
+      (is (= c/black
+             (pattern-at pattern (t/point 0. 0. 1.))))
+      (is (= c/black
+             (pattern-at pattern (t/point 0.708 0. 0.708))))))
+  #+END_SRC
+
+  #+NAME: pats_rings
+  #+BEGIN_SRC clojure
+  (defrecord Rings [a b transform inverse-t]
+    Pattern
+    (pattern-at [{:keys [a b]} [x _ z]]
+      (let [r (Math/floor (Math/sqrt (+ (* x x) (* z z))))]
+        (if (= 0.0 (mod r 2))
+          a b))))
+
+  (defn rings
+    ([a b transform]
+     (map->Rings
+       {:a a :b b
+        :transform transform
+        :inverse-t (m/inverse transform)}))
+    ([a b]
+     (rings a b (m/id 4))))
+  #+END_SRC
+
+* Checker
+
+  [[file:../samples/patterns_checker_example.png]]
+
+  Checker is a pattern of alternating cubes, where two cubes of the same color are never adjacent.
+
+  #+NAME: pats_checker_test
+  #+BEGIN_SRC clojure
+  (testing "Checkers should repeat in x"
+    (let [pattern (checker c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0.99 0. 0.))))
+      (is (= c/black
+             (pattern-at pattern (t/point 1.01 0. 0.))))))
+
+  (testing "Checkers should repeat in y"
+    (let [pattern (checker c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0.99 0.))))
+      (is (= c/black
+             (pattern-at pattern (t/point 0. 1.01 0.))))))
+
+  (testing "Checkers should repeat in z"
+    (let [pattern (checker c/white c/black)]
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.))))
+      (is (= c/white
+             (pattern-at pattern (t/point 0. 0. 0.99))))
+      (is (= c/black
+             (pattern-at pattern (t/point 0. 0. 1.01))))))
+  #+END_SRC
+
+  #+NAME: pats_checker
+  #+BEGIN_SRC clojure
+  (defrecord Checker [a b transform inverse-t]
+    Pattern
+    (pattern-at [{:keys [a b]} [x y z]]
+      (let [d (+ (Math/floor x)
+                 (Math/floor y)
+                 (Math/floor z))]
+        (if (= 0. (mod d 2))
+          a b))))
+
+  (defn checker
+    ([a b transform]
+     (map->Checker
+       {:a a :b b
+        :transform transform
+        :inverse-t (m/inverse transform)}))
+    ([a b]
+     (checker a b (m/id 4))))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/patterns.clj
+  (ns rt-clj.patterns
+    (:import java.lang.Math)
+    (:require [rt-clj.colors :as c]
+              [rt-clj.matrices :as m]))
+
+
+  <<pats_generic>>
+
+
+  ;; Test Pattern
+  ;;;;;;;;;;;;;;;;;
+  <<pats_test_pattern>>
+
+
+  ;; Stripes
+  ;;;;;;;;;;;;
+  <<pats_stripes>>
+
+
+  ;; Gradient
+  ;;;;;;;;;;;;;
+  <<pats_gradient>>
+
+
+  ;; Rings
+  ;;;;;;;;;;
+  <<pats_rings>>
+
+
+  ;; Checker
+  ;;;;;;;;;;;;
+  <<pats_checker>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/patterns_test.clj
+  (ns rt-clj.patterns-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.patterns :refer :all]
+              [rt-clj.colors :as c]
+              [rt-clj.spheres :as s]
+              [rt-clj.transformations :as tr]
+              [rt-clj.tuples :as t]))
+
+  (deftest patterns-test
+
+    <<pats_generic_test>>
+
+    <<pats_stripes_test>>
+
+    <<pats_stripes_shape_test>>
+
+    <<pats_gradient_test>>
+
+    <<pats_rings_test>>
+
+    <<pats_checker_test>>)
+  #+END_SRC

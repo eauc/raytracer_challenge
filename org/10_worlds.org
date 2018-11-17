@@ -225,7 +225,7 @@
   #+BEGIN_SRC clojure
   (defn shade-hit [w h]
     (reduce
-      #(c/add %1 (m/lighting (get-in h [:object :material])
+      #(c/add %1 (m/lighting (get-in h [:object :material]) (:object h)
                              %2
                              (:point h) (:eyev h) (:normalv h)
                              (shadowed? w (:point h) %2)))

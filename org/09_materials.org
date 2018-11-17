@@ -10,7 +10,7 @@
   #+BEGIN_SRC clojure
   (testing "The default material"
     (let [m (material)]
-      (is (= (c/color 1. 1. 1.)
+      (is (= c/white
              (:color m)))
       (is (= 0.1
              (:ambient m)))
@@ -25,7 +25,7 @@
   #+NAME: materials_create
   #+BEGIN_SRC clojure
   (defn material []
-    {:color (c/color 1. 1. 1.)
+    {:color c/white
      :ambient 0.1
      :diffuse 0.9
      :specular 0.9
@@ -53,50 +53,71 @@
             normalv (t/vector 0. 0. -1.)
             light (l/point-light (t/point 0. 0. -10.) (c/color 1. 1. 1.))]
         (is (t/eq? (c/color 1.9 1.9 1.9)
-                   (lighting m light position eyev normalv)))))
+                   (lighting m (s/sphere) light position eyev normalv)))))
 
     (testing "Lighting with the eye between light and surface, eye offset 45°"
       (let [eyev (t/vector 0. pi-4 (- 0 pi-4))
             normalv (t/vector 0. 0. -1.)
             light (l/point-light (t/point 0. 0. -10.) (c/color 1. 1. 1.))]
         (is (t/eq? (c/color 1. 1. 1.)
-                   (lighting m light position eyev normalv)))))
+                   (lighting m (s/sphere) light position eyev normalv)))))
 
     (testing "Lighting with eye opposite surface, light offset 45°"
       (let [eyev (t/vector 0. 0. -1.)
             normalv (t/vector 0. 0. -1.)
             light (l/point-light (t/point 0. 10. -10.) (c/color 1. 1. 1.))]
         (is (t/eq? (c/color 0.7364 0.7364 0.7364)
-                   (lighting m light position eyev normalv)))))
+                   (lighting m (s/sphere) light position eyev normalv)))))
 
     (testing "Lighting with eye in the path of the reflection vector"
       (let [eyev (t/vector 0. (- 0 pi-4) (- 0 pi-4))
             normalv (t/vector 0. 0. -1.)
             light (l/point-light (t/point 0. 10. -10.) (c/color 1. 1. 1.))]
         (is (t/eq? (c/color 1.6364 1.6364 1.6364)
-                   (lighting m light position eyev normalv)))))
+                   (lighting m (s/sphere) light position eyev normalv)))))
 
     (testing "Lighting with the light behind the surface"
       (let [eyev (t/vector 0. 0. -1.)
             normalv (t/vector 0. 0. -1.)
             light (l/point-light (t/point 0. 0. 10.) (c/color 1. 1. 1.))]
         (is (t/eq? (c/color 0.1 0.1 0.1)
-                   (lighting m light position eyev normalv)))))
+                   (lighting m (s/sphere) light position eyev normalv)))))
 
     (testing "Lighting with the surface in shadow"
     (let [eyev (t/vector 0. 0. -1.)
           normalv (t/vector 0. 0. -1.)
           light (l/point-light (t/point 0. 0. -10.) (c/color 1. 1. 1.))]
       (is (= (c/color 0.1 0.1 0.1)
-             (lighting m light position eyev normalv :in-shadow))))))
+             (lighting m (s/sphere) light position eyev normalv :in-shadow))))))
+  #+END_SRC
+
+  Materials can be given patterns which replace color.
+
+  #+NAME: materials_pattern_test
+  #+BEGIN_SRC clojure
+  (testing "Lighting with a pattern applied"
+    (let [mat (-> (material)
+                  (assoc :pattern (pt/stripes c/white c/black)
+                         :ambient 1.
+                         :diffuse 0.
+                         :specular 0.))
+          eyev (t/vector 0. 0. -1.)
+          normalv (t/vector 0. 0. -1.)
+          light (l/point-light (t/point 0. 0. -10.) (c/color 1. 1. 1.))]
+      (is (= c/white
+             (lighting mat (s/sphere) light (t/point 0.9 0. 0.) eyev normalv false)))
+      (is (= c/black
+             (lighting mat (s/sphere) light (t/point 1.1 0. 0.) eyev normalv false)))))
   #+END_SRC
 
   #+NAME: materials_lighting
   #+BEGIN_SRC clojure
   (defn lighting
-    ([material light position eyev normalv in-shadow?]
-     (let [effective-color (c/dot (:color material) (:intensity light))
-           ambient (c/mul effective-color (:ambient material))]
+    ([{:keys [color pattern ambient diffuse shininess specular]}
+      object light position eyev normalv in-shadow?]
+     (let [color (if pattern (pt/pattern-at-shape pattern object position) color)
+           effective-color (c/dot color (:intensity light))
+           ambient (c/mul effective-color ambient)]
        (if in-shadow?
          ambient
          (let [lightv (t/norm (t/sub (:position light) position))
@@ -104,18 +125,18 @@
                inside? (> 0 light-dot-normal)]
            (if inside?
              ambient
-             (let [diffuse (c/mul effective-color (* (:diffuse material) light-dot-normal))
+             (let [diffuse (c/mul effective-color (* diffuse light-dot-normal))
                    reflectv (t/reflect (t/sub t/zerov lightv) normalv)
                    reflect-dot-eyev' (t/dot reflectv eyev)
-                   reflect-dot-eyev (Math/pow reflect-dot-eyev' (:shininess material))
+                   reflect-dot-eyev (Math/pow reflect-dot-eyev' shininess)
                    amb-dif (c/add ambient diffuse)
                    specular? (< 0 reflect-dot-eyev)]
                (if-not specular?
                  amb-dif
-                 (let [specular (c/mul (:intensity light) (* reflect-dot-eyev (:specular material)))]
+                 (let [specular (c/mul (:intensity light) (* reflect-dot-eyev specular))]
                    (c/add amb-dif specular)))))))))
-    ([material light position eyev normalv]
-     (lighting material light position eyev normalv nil)))
+    ([material object light position eyev normalv]
+     (lighting material object light position eyev normalv nil)))
   #+END_SRC
 
 * Files                                                           :noexport:
@@ -126,6 +147,7 @@
   #+BEGIN_SRC clojure :tangle ../src/rt_clj/materials.clj
   (ns rt-clj.materials
     (:require [rt-clj.colors :as c]
+              [rt-clj.patterns :as pt]
               [rt-clj.tuples :as t]))
 
 
@@ -141,12 +163,16 @@
               [rt-clj.materials :refer :all]
               [rt-clj.colors :as c]
               [rt-clj.lights :as l]
+              [rt-clj.patterns :as pt]
+              [rt-clj.spheres :as s]
               [rt-clj.tuples :as t]))
 
   (deftest materials-test
     <<materials_create_test>>
 
-    <<materials_lighting_test>>)
+    <<materials_lighting_test>>
+
+    <<materials_pattern_test>>)
   #+END_SRC
 
 * Example
