@@ -31,7 +31,7 @@
      (sphere (m/id 4) (mr/material))))
   #+END_SRC
 
-  Spheres has a transform property.
+  Spheres have a transform property.
 
   #+NAME: spheres_trans_test
   #+BEGIN_SRC clojure
@@ -129,7 +129,7 @@
 
   #+NAME: spheres_ray_int
   #+BEGIN_SRC clojure
-  (defn- local-intersect [{:keys [inverse-t] :as s} {:keys [origin direction]}]
+  (defn- local-intersect [s {:keys [origin direction]}]
     (let [s->ra (t/sub origin t/origin)
           two-a (* (t/dot direction direction) 2)
           b (* 2 (t/dot direction s->ra))

@@ -236,7 +236,7 @@
 
   (def sub (partial mapv -))
 
-  (def neg (partial sub (vector 0 0 0)))
+  (def neg (partial sub zerov))
 
   (defn mul [v s]
     (mapv #(* % s) v))
@@ -245,7 +245,7 @@
     (mapv #(/ % s) v))
 
   (defn dot [v w]
-    (reduce + (mapv * v w)))
+    (reduce + (map * v w)))
 
   (defn mag [v]
     (Math/sqrt (dot v v)))

@@ -30,10 +30,12 @@
   #+NAME: cameras_psize_test
   #+BEGIN_SRC clojure
   (testing "The pixel size for a horizontal canvas"
-    (:pixel-size (camera 200. 125. (/ Math/PI 2))))
+    (is (t/close? 0.01
+                  (:pixel-size (camera 200. 125. (/ Math/PI 2))))))
 
   (testing "The pixel size for a horizontal canvas"
-    (:pixel-size (camera 125. 200. (/ Math/PI 2))))
+    (is (t/close? 0.01
+                  (:pixel-size (camera 125. 200. (/ Math/PI 2))))))
   #+END_SRC
 
   #+NAME: cameras_create

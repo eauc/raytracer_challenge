@@ -6,7 +6,7 @@
 
 * Translation
 
-  We can translate point by multiplying them by a translation matrix.
+  We can translate points by multiplying them by a translation matrix.
 
   Vectors are unchanged by translations.
 

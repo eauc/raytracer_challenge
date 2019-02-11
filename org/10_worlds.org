@@ -9,8 +9,8 @@
   A world store all the objects and lights of a scene.
 
   For testing purpose we can create a default world with:
-  - to spheres centered at origin with different radii.
-  - a light source a =[-10,10,-10]=
+  - 2 spheres centered at origin with different radii.
+  - 1 light source at =[-10,10,-10]=
 
   #+NAME: worlds_create_test
   #+BEGIN_SRC clojure
@@ -53,7 +53,7 @@
 
 * Intersections with rays
 
-  The =intersect= function on a world should iterate over the list of objects and return all interesections with the ray.
+  The =intersect= function on a world should iterate over the list of objects and return all intersections with the ray.
 
   We return the intersections in sorted order since this will help with some future algo.
 
@@ -84,6 +84,7 @@
          (sort-by :t)
          vec))
   #+END_SRC
+
 * Hits
 
   To help with the ray tracer computations, the =prepare-hit= function pre-computes some values and add them to an intersection:
@@ -237,6 +238,8 @@
 
   Different cases:
   - when the ray misses all objects, returns black.
+  - when the ray hits an object in front of view, calculate shading at intersection point.
+  - when the ray hits an object behind the view, ignore this intersection.
 
   #+NAME: worlds_color_test
   #+BEGIN_SRC clojure

@@ -56,6 +56,8 @@
 
 * Intersections
 
+  The normalized plane is =y\=0=, with normal vector =n\=[0,1,0]=.
+
   There are 4 cases to consider:
   - the ray is parallel to the plane: no hit.
   - the ray is coplanar to the plane: no hit (planes are infinitely thins).
