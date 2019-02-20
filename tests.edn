@@ -5,4 +5,6 @@
           :ns-patterns ["-test$"]}]
  :color? true
  :randomize? false
- :reporter [kaocha.report/documentation]}
+ :reporter [kaocha.report/documentation]
+ :plugins [:kaocha.plugin/hooks]
+ :kaocha.hooks/post-load [rt-clj.repl/test-post-load-hook]}

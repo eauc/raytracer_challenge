@@ -12,5 +12,11 @@
 
 (defn init
   []
+  (println "**** REPL init")
   (alter-var-root #'s/*explain-out* (constantly expound/printer))
   (st/instrument))
+
+
+(defn test-post-load-hook [test-plan]
+  (init)
+  test-plan)
