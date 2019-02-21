@@ -1,4 +1,4 @@
-#+SETUPFILE: ~/org-html-themes/setup/theme-readtheorg.setup
+#+SETUPFILE: ~/.emacs.d/org-html-themes/setup/theme-readtheorg.setup
 
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="./theme.css"/>
 #+HTML_HEAD: <style type="text/css">

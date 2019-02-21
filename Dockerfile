@@ -6,7 +6,7 @@ COPY ./org ./org
 RUN emacs --batch -l "/root/.emacs.d/init.el" \
     --eval "(tangle-all \"org\")" \
     --eval "(publish-all \"RayTracer Challenge - Clojure\" \"org\" \"doc\")"
-RUN cp /root/theme.css /app/doc/
+RUN cp /root/.emacs.d/theme.css /app/doc/
 
 FROM debian as samples
 
