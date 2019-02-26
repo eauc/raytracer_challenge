@@ -4,6 +4,8 @@
 
 [[./index.org][Documentation index]]
 
+[[file:../samples/planes_spheres_example.png]]
+
 * Creation
 
   Planes are records implementing Shape protocol.
@@ -177,6 +179,3 @@
     <<planes_norm_test>>)
   #+END_SRC
 
-* Example
-
-  [[file:../samples/planes_spheres_example.png]]

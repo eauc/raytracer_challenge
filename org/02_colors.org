@@ -82,6 +82,8 @@
 
 * Canvas
 
+  [[file:../samples/canvas_ppm_example.png]]
+
   A canvas is just a rectangular grid of pixels.
   Every pixel in the canvas should be initialized to black by default.
   The canvas constructor also accept a custom initialization color.
@@ -235,10 +237,6 @@
    (defn ppm-data [cv]
      (flatten (map ppm-data-row cv)))
    #+END_SRC
-
-   Example :
-
-   [[file:../samples/canvas_ppm_example.png]]
 
 * Files                                                            :noexport:
   :PROPERTIES:

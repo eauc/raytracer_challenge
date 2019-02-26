@@ -271,6 +271,8 @@
   #+BEGIN_SRC clojure
   (def epsilon 10e-6)
 
+  (def infinity 10e300)
+
   (defn close? [a b]
     (> epsilon (Math/abs (- a b))))
   #+END_SRC

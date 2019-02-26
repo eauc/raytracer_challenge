@@ -1,0 +1,170 @@
+#+TITLE: 15 - Cubes
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+file:../samples/cubes_example.png]]
+
+* Creation
+
+  An axis-aligned bounding box, or AABB, is a box with a special property: its sides are all aligned with the scene’s axes. Two are aligned with the x axis, two with the y axis, and two with the z axis.
+
+  #+NAME: cubes_create
+  #+BEGIN_SRC clojure
+  (defrecord Cube [material transform inverse-t trans-inverse-t]
+    sh/Shape
+    (sh/intersect [sh ray]
+      (sh/intersect' sh ray local-intersect))
+    (sh/normal [sh world-p]
+      (sh/normal' sh world-p local-normal)))
+
+
+  (defn cube
+    ([transform material]
+     (let [inverse-t (m/inverse transform)]
+       (map->Cube
+         {:material material
+          :transform transform
+          :inverse-t inverse-t
+          :trans-inverse-t (m/transpose inverse-t)})))
+    ([transform]
+     (cube transform mr/default-material))
+    ([]
+     (cube (m/id 4) mr/default-material)))
+  #+END_SRC
+
+* Intersections
+
+  #+NAME: cubes_ints_test
+  #+BEGIN_SRC clojure
+  (testing "A ray intersects a cube"
+    (are [origin direction t]
+        (= t
+           (mapv :t (local-intersect (cube) (r/ray origin direction))))
+        (t/point 5. 0.5 0.) (t/vector -1. 0. 0.) [4. 6.]
+        (t/point -5. 0.5 0.) (t/vector 1. 0. 0.) [4. 6.]
+        (t/point 0.5 5. 0.) (t/vector 0. -1. 0.) [4. 6.]
+        (t/point 0.5 -5. 0.) (t/vector 0. 1. 0.) [4. 6.]
+        (t/point 0.5 0. 5.) (t/vector 0. 0. -1.) [4. 6.]
+        (t/point 0.5 0. -5.) (t/vector 0. 0. 1.) [4. 6.]
+        (t/point 0. 0.5 0.) (t/vector 0. 0. 1.) [-1. 1.]))
+
+  (testing "A ray misses a cube"
+    (are [origin direction]
+        (= []
+           (local-intersect (cube) (r/ray origin direction)))
+        (t/point -2. 0. 0.) (t/vector 0.2673 0.5345 0.8018)
+        (t/point 0. -2. 0.) (t/vector 0.8018 0.2673 0.5345)
+        (t/point 0. 0. -2.) (t/vector 0.5345 0.8018 0.2673)
+        (t/point 2. 0. 2.) (t/vector 0. 0. -1.)
+        (t/point 0. 2. 2.) (t/vector 0. -1. 0.)
+        (t/point 2. 2. 0.) (t/vector -1. 0. 0.)))
+  #+END_SRC
+
+  This works by treating a cube as it were composed of six planes, one for each face of the cube. Intersecting a ray with that cube involves testing it against each of the planes, and if the ray intersects them in just the right way, it means that the ray intersects the cube, as well.
+
+  The first step is to find the t values of all the places where the ray intersects those planes. For each pair of planes, there will be a minimum t closest to the ray origin, and a maximum t farther away. Focus on the largest of all the minimum t values and the smallest of all the maximum t values. The intersection of the ray with that square will always be those two points: the largest minimum t value and the smallest maximum t value. If the largest minimum t value is greater than the smallest maximum t value, the ray misses the cube.
+
+  #+NAME: cubes_ints
+  #+BEGIN_SRC clojure
+  (defn check-axis
+    [origin direction]
+    (let [t-min-numerator (- -1 origin)
+          t-max-numerator (- 1 origin)
+          parallel? (< (Math/abs direction) t/epsilon)
+          t-min (if parallel?
+                  (* t-min-numerator t/infinity)
+                  (/ t-min-numerator direction))
+          t-max (if parallel?
+                  (* t-max-numerator t/infinity)
+                  (/ t-max-numerator direction))]
+      (if (> t-min t-max)
+        [t-max t-min]
+        [t-min t-max])))
+
+
+  (defn local-intersect
+    [c {:keys [origin direction] :as ray}]
+    (let [[x-t-min x-t-max] (check-axis (t/x origin) (t/x direction))
+          [y-t-min y-t-max] (check-axis (t/y origin) (t/y direction))
+          [z-t-min z-t-max] (check-axis (t/z origin) (t/z direction))
+          t-min (max x-t-min y-t-min z-t-min)
+          t-max (min x-t-max y-t-max z-t-max)]
+      (if (> t-min t-max)
+        []
+        [(i/intersection t-min c)
+         (i/intersection t-max c)])))
+  #+END_SRC
+
+* Normal
+
+  Each face of a cube is a plane with its own normal. This normal will be the same at every point on the corresponding face.
+
+  #+NAME: cubes_normal_test
+  #+BEGIN_SRC clojure
+  (testing "The normal on the surface of a cube"
+    (are [point normal]
+        (= normal
+           (local-normal (cube) point))
+        (t/point 1. 0.5 -0.8) (t/vector 1. 0. 0.)
+        (t/point -1. -0.2 0.9) (t/vector -1. 0. 0.)
+        (t/point -0.4 1. -0.1) (t/vector 0. 1. 0.)
+        (t/point 0.3 -1. -0.7) (t/vector 0. -1. 0.)
+        (t/point -0.6 0.3 1.) (t/vector 0. 0. 1.)
+        (t/point 0.4 0.4 -1.) (t/vector 0. 0. -1.)
+        (t/point 1. 1. 1.) (t/vector 1. 0. 0.)
+        (t/point -1. -1. -1.) (t/vector -1. 0. 0.)))
+  #+END_SRC
+
+  #+NAME: cubes_normal
+  #+BEGIN_SRC clojure
+  (defn local-normal
+    [cube point]
+    (let [x-abs (Math/abs (t/x point))
+          y-abs (Math/abs (t/y point))
+          z-abs (Math/abs (t/z point))
+          maxc (max x-abs y-abs z-abs)]
+      (condp = maxc
+        x-abs (t/vector (t/x point) 0. 0.)
+        y-abs (t/vector 0. (t/y point) 0.)
+        (t/vector 0. 0. (t/z point)))))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/cubes.clj
+  (ns rt-clj.cubes
+    (:import java.lang.Math)
+    (:require [rt-clj.intersections :as i]
+              [rt-clj.matrices :as m]
+              [rt-clj.materials :as mr]
+              [rt-clj.shapes :as sh]
+              [rt-clj.tuples :as t]))
+
+
+  <<cubes_ints>>
+
+
+  <<cubes_normal>>
+
+
+  <<cubes_create>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/cubes_test.clj
+  (ns rt-clj.cubes-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.cubes :refer :all]
+              [rt-clj.rays :as r]
+              [rt-clj.tuples :as t]))
+
+  (deftest patterns-test
+
+    <<cubes_ints_test>>
+
+    <<cubes_normal_test>>)
+  #+END_SRC

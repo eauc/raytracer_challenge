@@ -4,6 +4,16 @@
 
 [[./index.org][Documentation index]]
 
+Let's draw a sphere, in =[0. 0. 0.]=, scaled by a factor =0.5= in the =z= direction.
+
+The rays origin is in =[3. 0. 0.]= and the projection screen is the plane =[-3. y z]=.
+
+A light source is behind the eye to the upper right at =[10. 10. -10.]=
+
+The sphere is purple and we will use our material lighting.
+
+[[file:../samples/sphere_light_example.png]]
+
 * Creation
 
   #+NAME: materials_create_test
@@ -184,13 +194,3 @@
   #+END_SRC
 
 * Example
-
-  Let's draw a sphere, in =[0. 0. 0.]=, scaled by a factor =0.5= in the =z= direction.
-
-  The rays origin is in =[3. 0. 0.]= and the projection screen is the plane =[-3. y z]=.
-
-  A light source is behind the eye to the upper right at =[10. 10. -10.]=
-
-  The sphere is purple and we will use our material lighting.
-
-  [[file:../samples/sphere_light_example.png]]

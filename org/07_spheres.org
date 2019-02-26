@@ -4,6 +4,14 @@
 
 [[./index.org][Documentation index]]
 
+Let's draw a sphere, in =[0. 0. 0.]=, scaled by a factor =0.5= in the =y= direction.
+
+The rays origin is in =[3. 0. 0.]= and the projection screen is the plane =[-3. y z]=.
+
+Pixels will be black if the ray misses, red if the ray hits the sphere.
+
+[[file:../samples/sphere_ray_example.png]]
+
 * Creation
 
   Spheres are record implementing Shape protocol.
@@ -265,12 +273,3 @@
     <<spheres_norm_trans_test>>)
   #+END_SRC
 
-* Example
-
-  Let's draw a sphere, in =[0. 0. 0.]=, scaled by a factor =0.5= in the =y= direction.
-
-  The rays origin is in =[3. 0. 0.]= and the projection screen is the plane =[-3. y z]=.
-
-  Pixels will be black if the ray misses, red if the ray hits the sphere.
-
-  [[file:../samples/sphere_ray_example.png]]

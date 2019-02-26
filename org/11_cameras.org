@@ -4,6 +4,8 @@
 
 [[./index.org][Documentation index]]
 
+[[file:../samples/camera_world_example.png]]
+
 * Creation
 
   Cameras are defined by:
@@ -181,6 +183,3 @@
 
     <<cameras_world_test>>)
   #+END_SRC
-* Example
-
-  [[file:../samples/camera_world_example.png]]
