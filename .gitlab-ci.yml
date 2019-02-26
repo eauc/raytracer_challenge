@@ -5,7 +5,9 @@ services:
 variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
-  CONTAINER_TEST_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  CONTAINER_SRC_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-src
+  CONTAINER_SAMPLES_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-samples
+  CONTAINER_TEST_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
   CONTAINER_DEPLOY_IMAGE: registry.heroku.com/eauc-rt-clj/web
 
 before_script:
@@ -19,8 +21,14 @@ stages:
 build:
   stage: build
   script:
+    - docker pull ${CONTAINER_SRC_IMAGE} || true
+    - docker pull ${CONTAINER_SAMPLES_IMAGE} || true
     - docker pull ${CONTAINER_TEST_IMAGE} || true
-    - docker build --cache-from ${CONTAINER_TEST_IMAGE} -t ${CONTAINER_TEST_IMAGE} .
+    - docker build --cache-from ${CONTAINER_SRC_IMAGE} -t ${CONTAINER_SRC_IMAGE} --target src .
+    - docker build --cache-from ${CONTAINER_SRC_IMAGE} --cache-from ${CONTAINER_SAMPLES_IMAGE} -t ${CONTAINER_SAMPLES_IMAGE} --target samples .
+    - docker build --cache-from ${CONTAINER_SRC_IMAGE} --cache-from ${CONTAINER_SAMPLES_IMAGE} --cache-from ${CONTAINER_TEST_IMAGE} -t ${CONTAINER_TEST_IMAGE} --target production .
+    - docker push $CONTAINER_SRC_IMAGE
+    - docker push $CONTAINER_SAMPLES_IMAGE
     - docker push $CONTAINER_TEST_IMAGE
 
 deploy:
