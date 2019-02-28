@@ -1,0 +1,212 @@
+#+TITLE: 17 - Cones
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+[[file:../samples/cones_example.png]]
+
+* Creation
+
+  #+NAME: cones_create
+  #+BEGIN_SRC clojure
+  (defrecord Cone [closed? minimum maximum material transform inverse-t trans-inverse-t]
+    sh/Shape
+    (sh/intersect [sh ray]
+      (sh/intersect' sh ray local-intersect))
+    (sh/normal [sh world-p]
+      (sh/normal' sh world-p local-normal)))
+
+
+  (defn cone
+    ([transform material]
+     (let [inverse-t (m/inverse transform)]
+       (map->Cone
+         {:closed? false
+          :minimum (- t/infinity)
+          :maximum t/infinity
+          :material material
+          :transform transform
+          :inverse-t inverse-t
+          :trans-inverse-t (m/transpose inverse-t)})))
+    ([transform]
+     (cone transform mr/default-material))
+    ([]
+     (cone (m/id 4) mr/default-material)))
+  #+END_SRC
+
+* Intersections
+
+  #+NAME: cones_ints_test
+  #+BEGIN_SRC clojure
+  (testing "Intersecting a cone with a ray"
+    (are [origin direction t]
+        (t/eq? t
+               (mapv :t (local-intersect (cone) (r/ray origin (t/norm direction)))))
+        (t/point 0. 0. -5.) (t/vector 0. 0. 1.) [5. 5.]
+        (t/point 0. 0. -5.) (t/vector 1. 1. 1.) [8.660254 8.660254]
+        (t/point 1. 1. -5.) (t/vector -0.5, -1. 1.) [4.550055 49.449944]))
+
+  (testing "Intersecting a cone with a ray parallel to one of its halves"
+    (is (t/eq? [0.353553]
+               (mapv :t (local-intersect (cone) (r/ray (t/point 0. 0. -1.)
+                                                       (t/norm (t/vector 0. 1. 1.))))))))
+
+  (testing "Intersecting a cone's end caps"
+    (let [c (assoc (cone)
+                   :minimum -0.5
+                   :maximum 0.5
+                   :closed? true)]
+      (are [origin direction cnt]
+          (= cnt
+             (count (local-intersect c (r/ray origin (t/norm direction)))))
+          (t/point 0. 0. -5.) (t/vector 0. 1. 0.) 0
+          (t/point 0. 0. -0.25) (t/vector 0. 1. 1.) 2
+          (t/point 0. 0. -0.25) (t/vector 0. 1. 0.) 4)))
+  #+END_SRC
+
+  The same as cylinders, except the formula for =a,b,c=.
+
+  Also, the ray misses the cone when a & b are zero (not only a).
+
+  The distance of the hit when a = 0 but b != 0 (the ray is parallel to one half of the cone but intersect the other) is slightly different.
+
+  #+NAME: cones_ints
+  #+BEGIN_SRC clojure
+  (defn local-intersect
+    [{:keys [minimum maximum] :as cne}
+     {:keys [direction origin] :as ray}]
+    (intersect-caps
+      cne ray
+      (let [a (- (+ (Math/pow (t/x direction) 2.)
+                    (Math/pow (t/z direction) 2.))
+                 (Math/pow (t/y direction) 2.))
+            b (- (+ (* 2 (t/x origin) (t/x direction))
+                    (* 2 (t/z origin) (t/z direction)))
+                 (* 2 (t/y origin) (t/y direction)))]
+        (if (and (t/close? a 0.)
+                 (t/close? b 0.))
+          []
+          (let [c (- (+ (Math/pow (t/x origin) 2.)
+                        (Math/pow (t/z origin) 2.))
+                     (Math/pow (t/y origin) 2.))
+                disc (- (Math/pow b 2.) (* 4. a c))]
+            (if (< disc 0.)
+              []
+              (if (t/close? a 0.)
+                [(i/intersection (- (/ c (* 2. b))) cne)]
+                (let [disc-sqrt (Math/sqrt disc)
+                      t0 (/ (- 0. b disc-sqrt) (* 2. a))
+                      t1 (/ (+ (- 0. b) disc-sqrt) (* 2. a))
+                      y0 (+ (t/y origin) (* t0 (t/y direction)))
+                      y1 (+ (t/y origin) (* t1 (t/y direction)))]
+                  (filterv
+                    identity
+                    [(if (< minimum y0 maximum) (i/intersection t0 cne))
+                     (if (< minimum y1 maximum) (i/intersection t1 cne))])))))))))
+  #+END_SRC
+
+* Normal
+
+  #+NAME: cones_normal_test
+  #+BEGIN_SRC clojure
+  (testing "Computing the normal vector on a cone"
+    (are [point n]
+        (= n
+           (local-normal (cone) point))
+        (t/point 0. 0. 0.) (t/vector 0. 0. 0.)
+        (t/point 1. 1. 1.) (t/vector 1. (- (Math/sqrt 2.)) 1.)
+        (t/point -1. -1. 0.) (t/vector -1. 1. 0.)))
+  #+END_SRC
+
+  The same as cylinders, except the normal as an =y= component.
+
+  #+NAME: cones_normal
+  #+BEGIN_SRC clojure
+  (defn local-normal
+    [{:keys [minimum maximum] :as cone} point]
+    (let [d (+ (Math/pow (t/x point) 2.)
+               (Math/pow (t/z point) 2.))]
+      (cond
+        (and (< d 1) (>= (t/y point) (- maximum t/epsilon))) (t/vector 0. 1. 0.)
+        (and (< d 1) (<= (t/y point) (+ minimum t/epsilon))) (t/vector 0. -1. 0.)
+        :else (let [y (Math/sqrt (+ (Math/pow (t/x point) 2.)
+                                    (Math/pow (t/z point) 2.)))]
+                (t/vector (t/x point)
+                          (if (< (t/y point) 0.) y (- y))
+                          (t/z point))))))
+  #+END_SRC
+
+* Closed cones
+
+  The same as cylinders, except the radius of the cone is the absolute value of =y=.
+
+  #+NAME: cones_closed
+  #+BEGIN_SRC clojure
+  (defn check-cap
+    [{:keys [origin direction] :as ray} t y]
+    (let [x (+ (t/x origin) (* t (t/x direction)))
+          z (+ (t/z origin) (* t (t/z direction)))]
+      (>= (Math/abs y) (+ (Math/pow x 2.)
+                          (Math/pow z 2.)))))
+
+
+  (defn intersect-caps
+    [{:keys [closed? minimum maximum] :as c}
+     {:keys [origin direction] :as ray}
+     ints]
+    (if (or (not closed?)
+            (t/close? 0. (t/y direction)))
+      ints
+      (let [t-min (/ (- minimum (t/y origin)) (t/y direction))
+            t-max (/ (- maximum (t/y origin)) (t/y direction))
+            cap-min? (check-cap ray t-min minimum)
+            cap-max? (check-cap ray t-max maximum)]
+        (into
+          []
+          (concat
+            ints
+            (filter identity [(if cap-min? (i/intersection t-min c))
+                              (if cap-max? (i/intersection t-max c))]))))))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/cones.clj
+  (ns rt-clj.cones
+    (:import java.lang.Math)
+    (:require [rt-clj.intersections :as i]
+              [rt-clj.matrices :as m]
+              [rt-clj.materials :as mr]
+              [rt-clj.shapes :as sh]
+              [rt-clj.tuples :as t]))
+
+
+  <<cones_closed>>
+
+
+  <<cones_ints>>
+
+
+  <<cones_normal>>
+
+
+  <<cones_create>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/cones_test.clj
+  (ns rt-clj.cones-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.cones :refer :all]
+              [rt-clj.rays :as r]
+              [rt-clj.tuples :as t]))
+
+  (deftest cones-test
+
+    <<cones_ints_test>>
+
+    <<cones_normal_test>>)
+  #+END_SRC
