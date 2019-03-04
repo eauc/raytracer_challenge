@@ -8,20 +8,14 @@ RUN emacs --batch -l "/root/.emacs.d/init.el" \
     --eval "(publish-all \"RayTracer Challenge - Clojure\" \"org\" \"doc\")"
 RUN cp /root/.emacs.d/theme.css /app/doc/
 
-FROM debian as samples
-
-RUN apt update && apt install -y imagemagick
-
-WORKDIR /app
 COPY ./samples ./samples
 COPY ./build/convert_ppm_images.sh .
-
 RUN ./convert_ppm_images.sh
 
 FROM nginx as production
 
 COPY --from=src /app/doc /usr/share/nginx/html/doc
-COPY --from=samples /app/samples /usr/share/nginx/html/samples
+COPY --from=src /app/samples /usr/share/nginx/html/samples
 COPY ./build/nginx.conf.template /etc/nginx/conf.d/conf.template
 
 ENV PORT 80
