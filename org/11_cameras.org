@@ -129,14 +129,28 @@
   #+BEGIN_SRC clojure
   (def default-depth 4)
 
-  (defn render [{:keys [hsize vsize] :as cam} world]
-    (reduce
-      (fn [image y]
-        (reduce
-          (fn [image x]
-            (ca/assoc-at image x y (w/color world (pixel-ray cam x y) default-depth)))
-          image (range hsize)))
-      (ca/canvas hsize vsize) (range vsize)))
+  (defn render
+    ([{:keys [hsize vsize] :as cam} world
+      {:keys [parallel?] :as options
+       :or {parallel? true}}]
+     (if parallel?
+       (cr/fold
+         (int (/ vsize 8))
+         (fn combinef
+           ([] [])
+           ([a b] (concat a b)))
+         (fn reducef
+           ([] [])
+           ([cs y]
+            (conj cs (mapv #(w/color world (pixel-ray cam % y) default-depth)
+                           (vec (range hsize))))))
+         (vec (range vsize)))
+       (mapv (fn [y]
+               (mapv #(w/color world (pixel-ray cam % y) default-depth)
+                     (range hsize)))
+             (range vsize))))
+    ([cam world]
+     (render cam world {})))
   #+END_SRC
 
 * Files                                                           :noexport:
@@ -147,7 +161,8 @@
   #+BEGIN_SRC clojure :tangle ../src/rt_clj/cameras.clj
   (ns rt-clj.cameras
     (:import java.lang.Math)
-    (:require [rt-clj.canvas :as ca]
+    (:require [clojure.core.reducers :as cr]
+              [rt-clj.canvas :as ca]
               [rt-clj.matrices :as m]
               [rt-clj.rays :as r]
               [rt-clj.tuples :as t]
