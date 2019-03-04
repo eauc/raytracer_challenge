@@ -13,9 +13,80 @@
     (normal [sh world-p] "Computes the normal of the shape at world point"))
   #+END_SRC
 
-* Utilities
+
+* Intersections
 
   To calculate the world-intersect, we must first transform the ray in the object coordinates.
+
+  #+NAME: shapes_ints
+  #+BEGIN_SRC clojure
+  (defn intersect' [{:keys [inverse-t] :as sh} ra local-intersect]
+    (let [local-ray (r/transform ra inverse-t)]
+      (local-intersect sh local-ray)))
+  #+END_SRC
+
+* Normal
+
+  =world->object= takes a point in world space and transform it to object space, taking into consideration any parent objects between the two spaces.
+
+  #+NAME: shapes_w2o_test
+  #+BEGIN_SRC clojure
+  (testing "Converting a point from world to object space"
+    (let [sphere (s/sphere (tr/translation 5. 0. 0.))
+          g2 (gr/group (tr/scaling 2. 2. 2.) [sphere])
+          g1 (gr/group (tr/rotation-y (/ Math/PI 2.)) [g2])]
+      (is (t/eq? (t/point 0. 0. -1.)
+                 (world->object (first (:children (first (:children g1))))
+                                (t/point -2. 0. -10.))))))
+  #+END_SRC
+
+  #+NAME: shapes_w2o
+  #+BEGIN_SRC clojure
+  (defn world->object
+    [{:keys [parent inverse-t] :as shape} point]
+    (if (nil? shape)
+      point
+      (m/mul inverse-t (world->object parent point))))
+  #+END_SRC
+
+  =object->world= takes a normal vector in object space and transform it to world space, taking into consideration any parent objects between the two spaces.
+
+  #+NAME: shapes_o2w_test
+  #+BEGIN_SRC clojure
+  (testing "Converting a normal from object to world space"
+    (let [sphere (s/sphere (tr/translation 5. 0. 0.))
+          g2 (gr/group (tr/scaling 1. 2. 3.) [sphere])
+          g1 (gr/group (tr/rotation-y (/ Math/PI 2.)) [g2])
+          sqrt3-on3 (/ (Math/sqrt 3.) 3.)]
+      (is (t/eq? (t/vector 0.285714 0.428571 -0.857142)
+                 (object->world (first (:children (first (:children g1))))
+                                (t/vector sqrt3-on3 sqrt3-on3 sqrt3-on3))))))
+  #+END_SRC
+
+  #+NAME: shapes_o2w
+  #+BEGIN_SRC clojure
+  (defn object->world
+    [{:keys [trans-inverse-t parent] :as shape} v]
+    (let [[x y z] ((juxt t/x t/y t/z) (m/mul trans-inverse-t v))
+          new-v (t/norm (t/vector x y z))]
+      (if (nil? parent)
+        new-v
+        (object->world parent new-v))))
+  #+END_SRC
+
+  =shape/normal= must find the normal on a child object of a group, taking into account transformations on both the child object and the parent(s).
+
+  #+NAME: shapes_normal_test
+  #+BEGIN_SRC clojure
+  (testing "Finding the normal on a child object"
+    (let [sphere (s/sphere (tr/translation 5. 0. 0.))
+          g2 (gr/group (tr/scaling 1. 2. 3.) [sphere])
+          g1 (gr/group (tr/rotation-y (/ Math/PI 2.)) [g2])
+          sqrt3-on3 (/ (Math/sqrt 3.) 3.)]
+      (is (t/eq? (t/vector 0.285703 0.428543 -0.857160)
+                 (normal (first (:children (first (:children g1))))
+                         (t/point 1.7321 1.1547 -5.5774))))))
+  #+END_SRC
 
   To calculate the world-normal, we must :
   - first transform the intersection point into object-world.
@@ -24,17 +95,12 @@
   - this calculation results in a wrong =w= component, so we just trop it.
   - the resulting vector is also not normalized anymore, so we normalize the result.
 
-  #+NAME: shapes_utilities
+  #+NAME: shapes_normal
   #+BEGIN_SRC clojure
-  (defn intersect' [{:keys [inverse-t] :as sh} ra local-intersect]
-    (let [local-ray (r/transform ra inverse-t)]
-      (local-intersect sh local-ray)))
-
-  (defn normal' [{:keys [inverse-t trans-inverse-t] :as sh} world-p local-normal]
-    (let [object-p (m/mul inverse-t world-p)
-          object-normal (local-normal sh object-p)
-          [x y z] (m/mul trans-inverse-t object-normal)]
-      (t/norm (t/vector x y z))))
+  (defn normal' [shape world-point local-normal-fn]
+    (let [local-point (world->object shape world-point)
+          local-normal (local-normal-fn shape local-point)]
+      (object->world shape local-normal)))
   #+END_SRC
 
 * Files                                                           :noexport:
@@ -52,5 +118,33 @@
   <<shapes_protocol>>
 
 
-  <<shapes_utilities>>
+  <<shapes_w2o>>
+
+
+  <<shapes_o2w>>
+
+
+  <<shapes_ints>>
+
+
+  <<shapes_normal>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/shapes_test.clj
+  (ns rt-clj.shapes-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.shapes :refer :all]
+              [rt-clj.groups :as gr]
+              [rt-clj.rays :as r]
+              [rt-clj.spheres :as s]
+              [rt-clj.transformations :as tr]
+              [rt-clj.tuples :as t]))
+
+  (deftest shapes-test
+
+    <<shapes_w2o_test>>
+
+    <<shapes_o2w_test>>
+
+    <<shapes_normal_test>>)
   #+END_SRC

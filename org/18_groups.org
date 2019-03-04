@@ -1,0 +1,146 @@
+#+TITLE: 18 - Groups
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+[[file:../samples/groups_example.png]]
+
+* Creation
+
+  #+NAME: groups_create
+  #+BEGIN_SRC clojure
+  (defrecord Group [transform inverse-t trans-inverse-t children]
+    sh/Shape
+    (sh/intersect [sh ray]
+      (sh/intersect' sh ray local-intersect))
+    (sh/normal [sh world-p]
+      (sh/normal' sh world-p identity)))
+
+
+  (defn group
+    ([transform children]
+     (let [inverse-t (m/inverse transform)]
+       (with-children
+         (map->Group
+           {:transform transform
+            :inverse-t inverse-t
+            :trans-inverse-t (m/transpose inverse-t)})
+         children)))
+    ([transform]
+     (group transform []))
+    ([]
+     (group (m/id 4) [])))
+  #+END_SRC
+
+* Children
+
+  Children contains a reference to their parent group.
+
+  #+NAME: groups_children_test
+  #+BEGIN_SRC clojure
+  (testing "Adding children to a group"
+    (let [g (with-children
+              (group (tr/translation 1. 2. 3.))
+              [(s/sphere)])]
+      (is (= (tr/translation 1. 2. 3.)
+             (:transform (:parent (first (:children g))))))))
+  #+END_SRC
+
+  #+NAME: groups_children
+  #+BEGIN_SRC clojure
+  (defn with-parent
+    [sh p]
+    (let [new-sh (assoc sh :parent p)]
+      (assoc new-sh :children (mapv #(with-parent % new-sh) (:children new-sh)))))
+
+  (defn with-children
+    [g cs]
+    (assoc g :children (mapv #(with-parent % g) cs)))
+  #+END_SRC
+
+* Intersections
+
+  Intersecting a ray with a empty group should always return no intersections.
+
+  Otherwise, it should returns the conjunction of all intersections with each child shape, sorted by increasing distance.
+
+  It should correctly apply the group and its children transformations.
+
+  #+NAME: groups_ints_test
+  #+BEGIN_SRC clojure
+  (testing "Intersecting a ray with an empty group"
+    (is (= []
+           (local-intersect (group) (r/ray (t/point 0. 0. 0.) (t/vector 0. 0. 1.))))))
+
+  (testing "Intersecting a ray with a nonempty group"
+    (let [s1 (s/sphere)
+          s2 (s/sphere (tr/translation 0. 0. -3.))
+          s3 (s/sphere (tr/translation 5. 0. 0.))
+          g (with-children (group) [s1 s2 s3])
+          r (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))]
+      (is (= [(nth (:children g) 1)
+              (nth (:children g) 1)
+              (nth (:children g) 0)
+              (nth (:children g) 0)]
+             (mapv :object (local-intersect g r))))))
+
+  (testing "Intersecting a transformed group"
+    (let [g (with-children
+              (group (tr/scaling 2. 2. 2.))
+              [(s/sphere (tr/translation 5. 0. 0.))])
+          r (r/ray (t/point 10. 0. -10.) (t/vector 0. 0. 1.))]
+      (is (= 2
+             (count (sh/intersect g r))))))
+  #+END_SRC
+
+  #+NAME: groups_ints
+  #+BEGIN_SRC clojure
+  (defn local-intersect
+    [{:keys [children] :as g} r]
+    (into []
+          (sort-by :t
+                   (reduce (fn [ints c]
+                             (concat ints (sh/intersect c r))) '() children))))
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/groups.clj
+  (ns rt-clj.groups
+    (:import java.lang.Math)
+    (:require [rt-clj.intersections :as i]
+              [rt-clj.matrices :as m]
+              [rt-clj.materials :as mr]
+              [rt-clj.shapes :as sh]
+              [rt-clj.tuples :as t]))
+
+
+  <<groups_children>>
+
+
+  <<groups_ints>>
+
+
+  <<groups_create>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/groups_test.clj
+  (ns rt-clj.groups-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.groups :refer :all]
+              [rt-clj.rays :as r]
+              [rt-clj.shapes :as sh]
+              [rt-clj.spheres :as s]
+              [rt-clj.transformations :as tr]
+              [rt-clj.tuples :as t]))
+
+  (deftest groups-test
+
+    <<groups_children_test>>
+
+    <<groups_ints_test>>)
+  #+END_SRC
