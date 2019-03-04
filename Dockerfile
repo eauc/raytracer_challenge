@@ -27,3 +27,17 @@ COPY ./build/nginx.conf.template /etc/nginx/conf.d/conf.template
 ENV PORT 80
 
 CMD /bin/bash -c "cat /etc/nginx/conf.d/conf.template | envsubst > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+
+FROM clojure:openjdk-8-lein-2.9.1 as test
+
+WORKDIR /app
+
+COPY ./project.clj .
+COPY ./tests.edn .
+RUN lein deps
+
+COPY ./dev ./dev
+COPY --from=src /app/src ./src
+COPY --from=src /app/test ./test
+
+CMD ["lein","kaocha"]
