@@ -43,7 +43,8 @@
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
         resolution 4
-        cam (cm/camera (* 150 resolution) (* 100 resolution) (/ Math/PI 3) view)
-        cv (cm/render cam world)]
-    (spit "./samples/groups_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv)))))
+        cam (cm/camera (* 150 resolution) (* 100 resolution) (/ Math/PI 3) view)]
+    (spit
+      "./samples/groups_example.ppm"
+      (clojure.string/join
+        "\n" (ca/ppm-rows (cm/render cam world {:parallel? true}))))))

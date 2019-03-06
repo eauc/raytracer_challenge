@@ -27,10 +27,11 @@
         view (tr/view (tu/point 7. 10. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 400 300 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
-    (spit "./samples/patterns_stripes_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv))))
+        cam (cm/camera 400 300 (/ Math/PI 3) view)]
+    (spit
+      "./samples/patterns_stripes_example.ppm"
+      (clojure.string/join
+        "\n" (ca/ppm-rows (cm/render cam world {:parallel? true})))))
 
 
   (let [gradient (pt/gradient (co/color 1. 0. 0.) (co/color 0. 0. 1.)
