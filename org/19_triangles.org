@@ -1,0 +1,200 @@
+#+TITLE: 19 - Triangles
+#+SETUPFILE: ./publish.setup
+#+PROPERTY: header-args :exports code :tangle no
+
+[[./index.org][Documentation index]]
+
+[[file:../samples/triangles_example.png]]
+
+* Creation
+
+  #+NAME: tris_create_test
+  #+BEGIN_SRC clojure
+  (testing "Constructing a triangle"
+    (let [ p1 (t/point 0. 1. 0.)
+          p2 (t/point -1. 0. 0.)
+          p3 (t/point 1. 0. 0.)
+          t (triangle p1 p2 p3)]
+      (is (= p1
+             (:p1 t)))
+      (is (= p2
+             (:p2 t)))
+      (is (= p3
+             (:p3 t)))
+      (is (= (t/vector -1. -1. 0.)
+             (:e1 t)))
+      (is (= (t/vector 1. -1. 0.)
+             (:e2 t)))
+      (is (= (t/vector 0. 0. -1.)
+             (:normal t)))))
+  #+END_SRC
+
+  We pre-compute 2 edges vectors and the normal vector at creation.
+
+  #+NAME: tris_create
+  #+BEGIN_SRC clojure
+  (defrecord Triangle [p1 p2 p3 e1 e2 normal material transform inverse-t trans-inverse-t]
+    sh/Shape
+    (sh/intersect [sh ray]
+      (sh/intersect' sh ray local-intersect))
+    (sh/normal [sh world-p]
+      (sh/normal' sh world-p local-normal)))
+
+
+  (defn triangle
+    ([p1 p2 p3 material]
+     (let [e1 (t/sub p2 p1)
+           e2 (t/sub p3 p1)]
+       (map->Triangle
+         {:p1 p1 :p2 p2 :p3 p3
+          :e1 e1 :e2 e2
+          :normal (t/norm (t/cross e2 e1))
+          :material material
+          :transform (m/id 4)
+          :inverse-t (m/inverse (m/id 4))
+          :trans-inverse-t (m/transpose (m/inverse (m/id 4)))})))
+    ([p1 p2 p3]
+     (triangle p1 p2 p3 mr/default-material)))
+  #+END_SRC
+
+* Intersection
+
+  A ray that misses a triangle should not add any intersections to the intersection list.
+
+  A ray that strikes a triangle should add exactly one intersection to the list.
+
+  The specific algorithm that we’ll implement is the Möller–Trumbore algorithm:
+  - cross the ray direction with e2,
+  - then dot the result with e1 to produce the determinant.
+  - if the result is close to zero, then the ray is parallel to the triangle and misses.
+
+  #+NAME: tris_int_test
+  #+BEGIN_SRC clojure
+  (testing "Intersecting a ray parallel to the triangle"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 0. -1. -2.) (t/vector 0. 1. 0.))]
+      (is (= []
+             (local-intersect tri ray)))))
+
+  (testing "A ray misses the p1-p3 edge"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 1. 1. -2.) (t/vector 0. 0. 1.))]
+      (is (= []
+             (local-intersect tri ray)))))
+
+  (testing "A ray misses the p1-p2 edge"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point -1. 1. -2.) (t/vector 0. 0. 1.))]
+      (is (= []
+             (local-intersect tri ray)))))
+
+  (testing "A ray misses the p2-p3 edge"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 0. -1. -2.) (t/vector 0. 0. 1.))]
+      (is (= []
+             (local-intersect tri ray)))))
+
+  (testing "A ray strikes a triangle"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 0. 0.5 -2.) (t/vector 0. 0. 1.))]
+      (is (= [2.]
+             (map :t (local-intersect tri ray))))))
+  #+END_SRC
+
+  #+NAME: tris_int
+  #+BEGIN_SRC clojure
+  (defn local-intersect
+    [{:keys [p1 e1 e2] :as triangle}
+     {:keys [origin direction] :as ray}]
+    (let [dir><e2 (t/cross direction e2)
+          d (t/dot e1 dir><e2)]
+      (if (t/close? 0. d)
+        []
+        (let [f (/ 1. d)
+              p1->origin (t/sub origin p1)
+              u (* f (t/dot p1->origin dir><e2))]
+          (if-not (<= 0. u 1.)
+            []
+            (let [origin><e1 (t/cross p1->origin e1)
+                  v (* f (t/dot direction origin><e1))]
+              (if (or (> 0 v)
+                      (< 1 (+ u v)))
+                []
+                [(i/intersection (* f (t/dot e2 origin><e1))
+                                 triangle)])))))))
+  #+END_SRC
+
+* Normal
+
+  The triangle’s precomputed normal is used for every point on the triangle.
+
+  #+NAME: tris_norm_test
+  #+BEGIN_SRC clojure
+  (testing "Finding the normal on a triangle"
+    (let [ tri (triangle (t/point 0. 1. 0.)
+                         (t/point -1. 0. 0.)
+                         (t/point 1. 0. 0.))]
+      (is (= (:normal tri)
+             (local-normal tri (t/point 0. 0.5 0.))))
+      (is (= (:normal tri)
+             (local-normal tri (t/point -0.5 0.75 0.))))
+      (is (= (:normal tri)
+             (local-normal tri (t/point 0.5 0.25 0.))))))
+  #+END_SRC
+
+  #+NAME: tris_norm
+  #+BEGIN_SRC clojure
+  (defn local-normal
+    [{:keys [normal] :as triangle} point]
+    normal)
+  #+END_SRC
+
+* Files                                                            :noexport:
+  :PROPERTIES:
+  :header-args: :exports none :noweb yes
+  :END:
+
+  #+BEGIN_SRC clojure :tangle ../src/rt_clj/triangles.clj
+  (ns rt-clj.triangles
+    (:import java.lang.Math)
+    (:require [rt-clj.intersections :as i]
+              [rt-clj.matrices :as m]
+              [rt-clj.materials :as mr]
+              [rt-clj.shapes :as sh]
+              [rt-clj.tuples :as t]))
+
+
+  <<tris_int>>
+
+
+  <<tris_norm>>
+
+
+  <<tris_create>>
+  #+END_SRC
+
+  #+BEGIN_SRC clojure :tangle ../test/rt_clj/triangles_test.clj
+  (ns rt-clj.triangles-test
+    (:require [clojure.test :refer :all]
+              [rt-clj.triangles :refer :all]
+              [rt-clj.rays :as r]
+              [rt-clj.tuples :as t]))
+
+  (deftest triangles-test
+
+    <<tris_create_test>>
+
+    <<tris_int_test>>
+
+    <<tris_norm_test>>)
+  #+END_SRC
