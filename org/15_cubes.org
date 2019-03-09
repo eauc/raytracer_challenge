@@ -16,8 +16,8 @@ file:../samples/cubes_example.png]]
     sh/Shape
     (sh/intersect [sh ray]
       (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p]
-      (sh/normal' sh world-p local-normal)))
+    (sh/normal [sh world-p hit]
+      (sh/normal' sh world-p hit local-normal)))
 
 
   (defn cube
@@ -106,7 +106,7 @@ file:../samples/cubes_example.png]]
   (testing "The normal on the surface of a cube"
     (are [point normal]
         (= normal
-           (local-normal (cube) point))
+           (local-normal (cube) point {}))
         (t/point 1. 0.5 -0.8) (t/vector 1. 0. 0.)
         (t/point -1. -0.2 0.9) (t/vector -1. 0. 0.)
         (t/point -0.4 1. -0.1) (t/vector 0. 1. 0.)
@@ -120,7 +120,7 @@ file:../samples/cubes_example.png]]
   #+NAME: cubes_normal
   #+BEGIN_SRC clojure
   (defn local-normal
-    [cube point]
+    [cube point _]
     (let [x-abs (Math/abs (t/x point))
           y-abs (Math/abs (t/y point))
           z-abs (Math/abs (t/z point))

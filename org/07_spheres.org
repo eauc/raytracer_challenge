@@ -22,8 +22,8 @@ Pixels will be black if the ray misses, red if the ray hits the sphere.
     sh/Shape
     (sh/intersect [sh ray]
       (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p]
-      (sh/normal' sh world-p local-normal)))
+    (sh/normal [sh world-p hit]
+      (sh/normal' sh world-p hit local-normal)))
 
   (defn sphere
     ([transform material]
@@ -186,40 +186,42 @@ Pixels will be black if the ray misses, red if the ray hits the sphere.
   #+BEGIN_SRC clojure
   (testing "The normal on a sphere at a point on the x axis"
     (is (= (t/vector 1. 0. 0.)
-           (sh/normal (sphere) (t/point 1. 0. 0.)))))
+           (sh/normal (sphere) (t/point 1. 0. 0.) {}))))
 
   (testing "The normal on a sphere at a point on the y axis"
     (is (= (t/vector 0. 1. 0.)
-           (sh/normal (sphere) (t/point 0. 1. 0.)))))
+           (sh/normal (sphere) (t/point 0. 1. 0.) {}))))
 
   (testing "The normal on a sphere at a point on the z axis"
     (is (= (t/vector 0. 0. 1.)
-           (sh/normal (sphere) (t/point 0. 0. 1.)))))
+           (sh/normal (sphere) (t/point 0. 0. 1.) {}))))
 
   (testing "The normal on a sphere at a non-axial point"
     (let [p (/ (Math/sqrt 3.) 3.)]
       (is (= (t/vector p p p)
-             (sh/normal (sphere) (t/point p p p))))))
+             (sh/normal (sphere) (t/point p p p) {})))))
   #+END_SRC
 
   But we must also take into account the sphere's transformation.
 
   #+NAME: spheres_norm_trans_test
   #+BEGIN_SRC clojure
-  (testing "Computing the normal on a translated sphere"
-    (is (t/eq? (t/vector 0. 0.70711 -0.70711)
-               (sh/normal (sphere (tr/translation 0. 1. 0.))
-                          (t/point 0, 1.70711, -0.70711)))))
+    (testing "Computing the normal on a translated sphere"
+      (is (t/eq? (t/vector 0. 0.70711 -0.70711)
+                 (sh/normal (sphere (tr/translation 0. 1. 0.))
+                            (t/point 0, 1.70711, -0.70711)
+                            {}))))
 
-  (testing "Computing the normal on a scaled sphere"
-    (is (t/eq? (t/vector 0. 0.97014 -0.24254)
-               (sh/normal (sphere (tr/scaling 1. 0.5 1.))
-                          (t/point 0, 0.70711, -0.70711)))))
+    (testing "Computing the normal on a scaled sphere"
+      (is (t/eq? (t/vector 0. 0.97014 -0.24254)
+                 (sh/normal (sphere (tr/scaling 1. 0.5 1.))
+                            (t/point 0, 0.70711, -0.70711)
+                            {}))))
   #+END_SRC
 
   #+NAME: spheres_norm
   #+BEGIN_SRC clojure
-  (defn- local-normal [_ object-p]
+  (defn- local-normal [_ object-p _]
     (t/sub object-p t/origin))
   #+END_SRC
 

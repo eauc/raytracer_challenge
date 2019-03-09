@@ -37,8 +37,8 @@
     sh/Shape
     (sh/intersect [sh ray]
       (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p]
-      (sh/normal' sh world-p local-normal)))
+    (sh/normal [sh world-p hit]
+      (sh/normal' sh world-p hit local-normal)))
 
 
   (defn triangle
@@ -67,6 +67,8 @@
   - cross the ray direction with e2,
   - then dot the result with e1 to produce the determinant.
   - if the result is close to zero, then the ray is parallel to the triangle and misses.
+
+  An intersection record may have u and v properties, to help identify where on a triangle the intersection occurred, relative to the triangle’s corners.
 
   #+NAME: tris_int_test
   #+BEGIN_SRC clojure
@@ -109,6 +111,15 @@
           ray (r/ray (t/point 0. 0.5 -2.) (t/vector 0. 0. 1.))]
       (is (= [2.]
              (map :t (local-intersect tri ray))))))
+
+  (testing "An intersection with a smooth triangle stores u/v"
+    (let [tri (triangle (t/point 0. 1. 0.) (t/point -1. 0. 0.) (t/point 1. 0. 0.))
+          ray (r/ray (t/point -0.2 0.3 -2.) (t/vector 0. 0. 1.))
+          [hit] (local-intersect tri ray)]
+      (is (t/close? 0.45
+                    (:u hit)))
+      (is (t/close? 0.25
+                    (:v hit)))))
   #+END_SRC
 
   #+NAME: tris_int
@@ -130,8 +141,10 @@
               (if (or (> 0 v)
                       (< 1 (+ u v)))
                 []
-                [(i/intersection (* f (t/dot e2 origin><e1))
-                                 triangle)])))))))
+                [(assoc (i/intersection
+                          (* f (t/dot e2 origin><e1))
+                          triangle)
+                        :u u :v v)])))))))
   #+END_SRC
 
 * Normal
@@ -145,18 +158,78 @@
                          (t/point -1. 0. 0.)
                          (t/point 1. 0. 0.))]
       (is (= (:normal tri)
-             (local-normal tri (t/point 0. 0.5 0.))))
+             (local-normal tri (t/point 0. 0.5 0.) {})))
       (is (= (:normal tri)
-             (local-normal tri (t/point -0.5 0.75 0.))))
+             (local-normal tri (t/point -0.5 0.75 0.) {})))
       (is (= (:normal tri)
-             (local-normal tri (t/point 0.5 0.25 0.))))))
+             (local-normal tri (t/point 0.5 0.25 0.) {})))))
   #+END_SRC
 
   #+NAME: tris_norm
   #+BEGIN_SRC clojure
   (defn local-normal
-    [{:keys [normal] :as triangle} point]
+    [{:keys [normal] :as triangle} point _]
     normal)
+  #+END_SRC
+
+* Smooth Triangles
+
+  A smooth triangle should store the triangle’s three vertex points, as well as the normal vector at each of those points.
+
+  When computing the normal vector on a smooth triangle, use the intersection’s u and v properties to interpolate the normal.
+
+  #+NAME: tris_smooth_test
+  #+BEGIN_SRC clojure
+  (let [tri (smooth-triangle
+              (t/point 0. 1. 0.)
+              (t/point -1. 0. 0.)
+              (t/point 1. 0. 0.)
+              (t/vector 0. 1. 0.)
+              (t/vector -1. 0. 0.)
+              (t/vector 1. 0. 0.))]
+    (testing "A smooth triangle uses u/v to interpolate the normal"
+      (let [hit (assoc (i/intersection 1. tri)
+                       :u 0.45 :v 0.25)]
+        (is (t/eq? (t/vector -0.554700 0.832050 0.)
+                   (sh/normal tri (t/point 0. 0. 0.) hit))))))
+  #+END_SRC
+
+  #+NAME: tris_smooth
+  #+BEGIN_SRC clojure
+  (defn smooth-local-normal
+    [{:keys [n1 n2 n3] :as tri} point {:keys [u v] :as hit}]
+    (t/add (t/add (t/mul n1 (- 1 u v))
+                  (t/mul n2 u))
+           (t/mul n3 v)))
+
+
+  (defrecord SmoothTriangle [p1 p2 p3
+                             n1 n2 n3
+                             e1 e2
+                             material transform inverse-t trans-inverse-t]
+    sh/Shape
+    (sh/intersect [sh ray]
+      (sh/intersect' sh ray local-intersect))
+    (sh/normal [sh world-p hit]
+      (sh/normal' sh world-p hit smooth-local-normal)))
+
+
+  (defn smooth-triangle
+    ([p1 p2 p3 n1 n2 n3 material]
+     (let [e1 (t/sub p2 p1)
+           e2 (t/sub p3 p1)]
+       (map->SmoothTriangle
+         {:p1 p1 :p2 p2 :p3 p3
+          :n1 n1 :n2 n2 :n3 n3
+          :e1 e1 :e2 e2
+          :material material
+          :transform (m/id 4)
+          :inverse-t (m/inverse (m/id 4))
+          :trans-inverse-t (m/transpose (m/inverse (m/id 4)))})))
+    ([p1 p2 p3 n1 n2 n3]
+     (smooth-triangle p1 p2 p3
+                      n1 n2 n3
+                      mr/default-material)))
   #+END_SRC
 
 * Files                                                            :noexport:
@@ -181,12 +254,17 @@
 
 
   <<tris_create>>
+
+
+  <<tris_smooth>>
   #+END_SRC
 
   #+BEGIN_SRC clojure :tangle ../test/rt_clj/triangles_test.clj
   (ns rt-clj.triangles-test
     (:require [clojure.test :refer :all]
               [rt-clj.triangles :refer :all]
+              [rt-clj.intersections :as i]
+              [rt-clj.shapes :as sh]
               [rt-clj.rays :as r]
               [rt-clj.tuples :as t]))
 
@@ -196,5 +274,7 @@
 
     <<tris_int_test>>
 
-    <<tris_norm_test>>)
+    <<tris_norm_test>>
+
+    <<tris_smooth_test>>)
   #+END_SRC

@@ -12,4 +12,5 @@
              :kaocha {:dependencies [[lambdaisland/kaocha "0.0-389"]]}}
   :aliases {"kaocha" ["with-profile" "+kaocha" "run" "-m" "kaocha.runner"]}
   :repl-options {:init-ns rt-clj.repl
-                 :init (init)})
+                 :init (init)}
+  :jvm-opts ["-Xss8m"])

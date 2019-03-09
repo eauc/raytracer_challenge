@@ -16,8 +16,8 @@
     sh/Shape
     (sh/intersect [sh ray]
       (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p]
-      (sh/normal' sh world-p local-normal)))
+    (sh/normal [sh world-p hit]
+      (sh/normal' sh world-p hit local-normal)))
 
   (defn plane
     ([transform material]
@@ -120,16 +120,16 @@
   #+BEGIN_SRC clojure
   (testing "The normal of a plane is constant everywhere"
     (is (= (t/vector 0. 1. 0.)
-           (local-normal (plane) (t/point 0. 0. 0.))))
+           (local-normal (plane) (t/point 0. 0. 0.) {})))
     (is (= (t/vector 0. 1. 0.)
-           (local-normal (plane) (t/point 10. 0. -10.))))
+           (local-normal (plane) (t/point 10. 0. -10.) {})))
     (is (= (t/vector 0. 1. 0.)
-           (local-normal (plane) (t/point -5. 0. 150.)))))
+           (local-normal (plane) (t/point -5. 0. 150.) {}))))
   #+END_SRC
 
   #+NAME: planes_norm
   #+BEGIN_SRC clojure
-  (defn local-normal [_ _]
+  (defn local-normal [_ _ _]
     (t/vector 0. 1. 0.))
   #+END_SRC
 

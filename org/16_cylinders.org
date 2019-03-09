@@ -14,8 +14,8 @@
     sh/Shape
     (sh/intersect [sh ray]
       (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p]
-      (sh/normal' sh world-p local-normal)))
+    (sh/normal [sh world-p hit]
+      (sh/normal' sh world-p hit local-normal)))
 
 
   (defn cylinder
@@ -102,7 +102,7 @@
   (testing "Normal vector on a cylinder"
     (are [point normal]
         (= normal
-           (local-normal (cylinder) point))
+           (local-normal (cylinder) point {}))
         (t/point 1. 0. 0.) (t/vector 1. 0. 0.)
         (t/point 0. 5. -1.) (t/vector 0. 0. -1.)
         (t/point 0. -2. 1.) (t/vector 0. 0. 1.)
@@ -116,7 +116,7 @@
   #+NAME: cyls_normal
   #+BEGIN_SRC clojure
   (defn local-normal
-    [{:keys [minimum maximum] :as cyl} point]
+    [{:keys [minimum maximum] :as cyl} point _]
     (let [d (+ (Math/pow (t/x point) 2.)
                (Math/pow (t/z point) 2.))]
       (cond
@@ -169,7 +169,7 @@
                      :closed? true)]
       (are [point normal]
           (= normal
-             (local-normal cyl point))
+             (local-normal cyl point {}))
           (t/point 0. 1. 0.) (t/vector 0. -1. 0.)
           (t/point 0.5 1. 0.) (t/vector 0. -1. 0.)
           (t/point 0. 1. 0.5) (t/vector 0. -1. 0.)

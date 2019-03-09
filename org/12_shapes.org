@@ -10,7 +10,7 @@
   #+BEGIN_SRC clojure
   (defprotocol Shape
     (intersect [sh ray] "Computes intersections of the shape with the ray")
-    (normal [sh world-p] "Computes the normal of the shape at world point"))
+    (normal [sh world-p hit] "Computes the normal of the shape at world point"))
   #+END_SRC
 
 
@@ -85,7 +85,8 @@
           sqrt3-on3 (/ (Math/sqrt 3.) 3.)]
       (is (t/eq? (t/vector 0.285703 0.428543 -0.857160)
                  (normal (first (:children (first (:children g1))))
-                         (t/point 1.7321 1.1547 -5.5774))))))
+                         (t/point 1.7321 1.1547 -5.5774)
+                         {})))))
   #+END_SRC
 
   To calculate the world-normal, we must :
@@ -97,9 +98,9 @@
 
   #+NAME: shapes_normal
   #+BEGIN_SRC clojure
-  (defn normal' [shape world-point local-normal-fn]
+  (defn normal' [shape world-point hit local-normal-fn]
     (let [local-point (world->object shape world-point)
-          local-normal (local-normal-fn shape local-point)]
+          local-normal (local-normal-fn shape local-point hit)]
       (object->world shape local-normal)))
   #+END_SRC
 

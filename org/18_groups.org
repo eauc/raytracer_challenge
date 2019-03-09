@@ -14,8 +14,8 @@
     sh/Shape
     (sh/intersect [sh ray]
       (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p]
-      (sh/normal' sh world-p identity)))
+    (sh/normal [sh world-p hit]
+      (sh/normal' sh world-p hit identity)))
 
 
   (defn group
@@ -50,8 +50,8 @@
   #+NAME: groups_children
   #+BEGIN_SRC clojure
   (defn with-parent
-    [sh p]
-    (let [new-sh (assoc sh :parent p)]
+    [sh {:keys [material] :as p}]
+    (let [new-sh (assoc sh :parent p :material material)]
       (assoc new-sh :children (mapv #(with-parent % new-sh) (:children new-sh)))))
 
   (defn with-children
