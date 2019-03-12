@@ -101,14 +101,16 @@
                               :color co/black
                               :refractive-index 1.5
                               :shininess 300
-                              :transparency 1.))
+                              :transparency 1.
+                              :shadow? false))
         sp2 (sp/sphere (ma/mul (tr/translation 0.4 0. 0.)
                                (tr/scaling 0.5 1. 1.))
                        (assoc mr/default-material
                               :color co/black
                               :refractive-index 1.5
                               :shininess 300
-                              :transparency 1.))
+                              :transparency 1.
+                              :shadow? false))
         lens (csg/csg (ma/mul (tr/translation 3.5 3.5 0.)
                               (ma/mul (tr/rotation-z (/ Math/PI 5.))
                                       (tr/scaling 2. 2. 2.)))
@@ -118,7 +120,8 @@
                               :color co/black
                               :reflective 1.
                               :shininess 300
-                              :transparency 1.))
+                              :transparency 1.
+                              :shadow? false))
         sp4 (sp/sphere (ma/mul (tr/translation 0.1 0. 0.)
                                (tr/scaling 1. 2. 2.))
                        (assoc mr/default-material

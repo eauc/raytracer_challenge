@@ -102,6 +102,13 @@
       (is (= true
              (shadowed? default-world (t/point 10. -10. 10.) light))))
 
+    (testing "Objects can opt out of shadow calculation"
+      (is (= false
+             (shadowed? (-> default-world
+                            (assoc-in [:objects 0 :material :shadow?] false)
+                            (assoc-in [:objects 1 :material :shadow?] false))
+                        (t/point 10. -10. 10.) light))))
+
     (testing "There is no shadow when an object is behind the light"
       (is (= false
              (shadowed? default-world (t/point -20. 20. -20.) light))))
@@ -117,7 +124,9 @@
     (let [p->l (t/sub (:position l) p)
           d (t/mag p->l)
           ray (r/ray p (t/norm p->l))
-          hit? (i/hit (intersect w ray))]
+          hits (filter #(get-in % [:object :material :shadow?] true)
+                       (intersect w ray))
+          hit? (i/hit hits)]
       (boolean (and hit? (> d (:t hit?))))))
   #+END_SRC
 

@@ -22,7 +22,8 @@
                    :reflective 0.
                    :transparency 1.
                    :refractive-index 2.
-                   :shininess 300)
+                   :shininess 300
+                   :shadow? false)
         floor (pl/plane (ma/mul (tr/translation 0. 0. 0.25)
                                 (tr/rotation-x (/ Math/PI 2.)))
                         f-m)
@@ -51,8 +52,7 @@
                      :minimum -1.
                      :maximum 1.)
         light-1 (li/point-light (tu/point 10. 10. 10.) (co/color 1. 1. 1.))
-        light-2 (li/point-light (tu/point 10. 10. -10.) (co/color 1. 1. 1.))
-        world (wo/world [floor wall cyl-1 cyl-2 cyl-3] [light-1 light-2])
+        world (wo/world [floor wall cyl-1 cyl-2 cyl-3] [light-1])
         view (tr/view (tu/point 4. 8. 4.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))

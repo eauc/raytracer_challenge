@@ -41,6 +41,7 @@ The sphere is purple and we will use our material lighting.
      :reflective 0.
      :refractive-index 1.
      :specular 0.9
+     :shadow? true
      :shininess 200
      :transparency 0.})
 
