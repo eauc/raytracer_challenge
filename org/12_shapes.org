@@ -6,13 +6,22 @@
 
 * Creation
 
-  #+NAME: shapes_protocol
+  #+NAME: shapes_create
   #+BEGIN_SRC clojure
-  (defprotocol Shape
-    (intersect [sh ray] "Computes intersections of the shape with the ray")
-    (normal [sh world-p hit] "Computes the normal of the shape at world point"))
+  (defn shape
+    ([local-intersect local-normal transform material]
+     (let [inverse-t (m/inverse transform)]
+       {:local-intersect local-intersect
+        :local-normal local-normal
+        :material material
+        :transform transform
+        :inverse-t inverse-t
+        :trans-inverse-t (m/transpose inverse-t)}))
+    ([local-intersect local-normal transform]
+     (shape local-intersect local-normal transform mr/default-material))
+    ([local-intersect local-normal]
+     (shape local-intersect local-normal (m/id 4) mr/default-material)))
   #+END_SRC
-
 
 * Intersections
 
@@ -20,9 +29,9 @@
 
   #+NAME: shapes_ints
   #+BEGIN_SRC clojure
-  (defn intersect' [{:keys [inverse-t] :as sh} ra local-intersect]
+  (defn intersect [{:keys [inverse-t local-intersect] :as shape} ra]
     (let [local-ray (r/transform ra inverse-t)]
-      (local-intersect sh local-ray)))
+      (local-intersect shape local-ray)))
   #+END_SRC
 
 * Normal
@@ -98,9 +107,9 @@
 
   #+NAME: shapes_normal
   #+BEGIN_SRC clojure
-  (defn normal' [shape world-point hit local-normal-fn]
+  (defn normal [{:keys [local-normal] :as shape} world-point hit]
     (let [local-point (world->object shape world-point)
-          local-normal (local-normal-fn shape local-point hit)]
+          local-normal (local-normal shape local-point hit)]
       (object->world shape local-normal)))
   #+END_SRC
 
@@ -112,11 +121,9 @@
   #+BEGIN_SRC clojure :tangle ../src/rt_clj/shapes.clj
   (ns rt-clj.shapes
     (:require [rt-clj.matrices :as m]
+              [rt-clj.materials :as mr]
               [rt-clj.rays :as r]
               [rt-clj.tuples :as t]))
-
-
-  <<shapes_protocol>>
 
 
   <<shapes_w2o>>
@@ -129,6 +136,9 @@
 
 
   <<shapes_normal>>
+
+
+  <<shapes_create>>
   #+END_SRC
 
   #+BEGIN_SRC clojure :tangle ../test/rt_clj/shapes_test.clj

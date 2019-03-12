@@ -5,6 +5,7 @@
             [rt-clj.lights :as li]
             [rt-clj.materials :as mr]
             [rt-clj.rays :as ra]
+            [rt-clj.shapes :as sh]
             [rt-clj.spheres :as sp]
             [rt-clj.transformations :as tr]
             [rt-clj.tuples :as tu]))
@@ -30,12 +31,12 @@
                                          (+ -3. (* j pixel-step-h)))
                       ray-d (tu/norm (tu/sub screen-p e))
                       ray (ra/ray e ray-d)
-                      hit? (in/hit (sp/intersect s ray))]
+                      hit? (in/hit (sh/intersect s ray))]
                   (if (nil? hit?)
                     miss-col
                     (let [position (ra/pos ray (:t hit?))
-                          normal (sp/normal s position)]
-                      (mr/lighting m l position ray-d normal)))))
+                          normal (sh/normal s position hit?)]
+                      (mr/lighting m s l position ray-d normal false)))))
         pixs (mapv (fn[i]
                      (mapv (fn [j]
                              (pixel i j))

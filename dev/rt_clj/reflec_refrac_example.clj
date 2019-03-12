@@ -44,10 +44,10 @@
         view (tr/view (tu/point 5. 10. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 600 450 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/reflection_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))
 
 
   (let [stripes (pt/stripes (co/color 0. 0.8 0.3) co/white)
@@ -80,10 +80,10 @@
         view (tr/view (tu/point 5. 10. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 600 450 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/refraction_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))
 
 
   (let [checker (pt/checker (co/color 0. 0.3 0.8) co/white)
@@ -107,7 +107,7 @@
         view (tr/view (tu/point 5. 10. 3.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 600 450 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/fresnel_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv)))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))

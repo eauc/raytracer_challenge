@@ -27,7 +27,8 @@
         view (tr/view (tu/point 7. 10. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 400 300 (/ Math/PI 3) view)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit
       "./samples/patterns_stripes_example.ppm"
       (clojure.string/join
@@ -47,10 +48,10 @@
         view (tr/view (tu/point 7. 10. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 400 300 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/patterns_gradient_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))
 
 
   (let [rings (pt/rings (co/color 0. 0.8 0.3) co/white
@@ -65,10 +66,10 @@
         view (tr/view (tu/point 12. 7. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 400 300 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/patterns_rings_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))
 
 
   (let [checker (pt/checker (co/color 0. 0.3 0.8) co/white)
@@ -82,7 +83,7 @@
         view (tr/view (tu/point 12. 7. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 400 300 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/patterns_checker_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv)))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))

@@ -10,23 +10,11 @@
 
   #+NAME: groups_create
   #+BEGIN_SRC clojure
-  (defrecord Group [transform inverse-t trans-inverse-t children]
-    sh/Shape
-    (sh/intersect [sh ray]
-      (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p hit]
-      (sh/normal' sh world-p hit identity)))
-
-
   (defn group
     ([transform children]
-     (let [inverse-t (m/inverse transform)]
-       (with-children
-         (map->Group
-           {:transform transform
-            :inverse-t inverse-t
-            :trans-inverse-t (m/transpose inverse-t)})
-         children)))
+     (with-children
+       (sh/shape local-intersect identity transform nil)
+       children))
     ([transform]
      (group transform []))
     ([]
@@ -51,7 +39,9 @@
   #+BEGIN_SRC clojure
   (defn with-parent
     [sh {:keys [material] :as p}]
-    (let [new-sh (assoc sh :parent p :material material)]
+    (let [new-sh (cond-> sh
+                   :always (assoc :parent p)
+                   (some? material) (assoc :material material))]
       (assoc new-sh :children (mapv #(with-parent % new-sh) (:children new-sh)))))
 
   (defn with-children

@@ -18,25 +18,8 @@ Pixels will be black if the ray misses, red if the ray hits the sphere.
 
   #+NAME: spheres_create
   #+BEGIN_SRC clojure
-  (defrecord Sphere [material transform inverse-t trans-inverse-t]
-    sh/Shape
-    (sh/intersect [sh ray]
-      (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p hit]
-      (sh/normal' sh world-p hit local-normal)))
-
-  (defn sphere
-    ([transform material]
-     (let [inverse-t (m/inverse transform)]
-       (map->Sphere
-         {:material material
-          :transform transform
-          :inverse-t inverse-t
-          :trans-inverse-t (m/transpose inverse-t)})))
-    ([transform]
-     (sphere transform mr/default-material))
-    ([]
-     (sphere (m/id 4) mr/default-material)))
+  (def sphere
+    (partial sh/shape local-intersect local-normal))
   #+END_SRC
 
   Spheres have a transform property.

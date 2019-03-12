@@ -37,11 +37,11 @@
         world (wo/world [floor wall
                          middle right]
                         [light])
-        cam (cm/camera 400 200 (/ Math/PI 3)
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3)
                        (tr/view (tu/point 0. 1.5 -5.)
                                 (tu/point 0. 1. 0.)
-                                (tu/vector 0. 1. 0.)))
-        cv (cm/render cam world)]
+                                (tu/vector 0. 1. 0.)))]
     ;; print the PPM file
     (spit "./samples/planes_spheres_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv)))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))

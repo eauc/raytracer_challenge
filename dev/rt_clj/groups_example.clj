@@ -25,20 +25,24 @@
                    :maximum 1.)
         sph (sp/sphere (ma/mul (tr/translation 0. 1. 0)
                                (tr/scaling 0.5 0.5 0.5)) mat)
-        grp-1 (gr/group (tr/translation 1.732050 0. 0.) [cyl sph])
-        grp-0 (gr/group (ma/id 4) [grp-1
-                                   (gr/group (tr/rotation-z (* 1. (/ Math/PI 3.))) [grp-1])
-                                   (gr/group (tr/rotation-z (* 2. (/ Math/PI 3.))) [grp-1])
-                                   (gr/group (tr/rotation-z (* 3. (/ Math/PI 3.))) [grp-1])
-                                   (gr/group (tr/rotation-z (* 4. (/ Math/PI 3.))) [grp-1])
-                                   (gr/group (tr/rotation-z (* 5. (/ Math/PI 3.))) [grp-1])])
-        grp (gr/group (ma/id 4) [grp-0
-                                 (gr/group (ma/mul (tr/translation 2.5 0. 0.)
-                                                   (tr/rotation-x (* 3. (/ Math/PI 4.)))) [grp-0])
-                                 (gr/group (ma/mul (tr/translation -2.5 0. 0.)
-                                                   (tr/rotation-x (/ Math/PI 4.))) [grp-0])])
+        grp-1 (fn grp-1 [n]
+                (gr/group (ma/mul (tr/rotation-z (* n (/ Math/PI 3.)))
+                                  (tr/translation 1.732050 0. 0.))
+                          [cyl sph]))
+        grp-0 (fn grp-0 [transform]
+                (gr/group transform [(grp-1 0.)
+                                     (grp-1 1.)
+                                     (grp-1 2.)
+                                     (grp-1 3.)
+                                     (grp-1 4.)
+                                     (grp-1 5.)]))
+        grps [(grp-0 (ma/id 4))
+              (grp-0 (ma/mul (tr/translation 2.5 0. 0.)
+                             (tr/rotation-x (* 3. (/ Math/PI 4.)))))
+              (grp-0 (ma/mul (tr/translation -2.5 0. 0.)
+                             (tr/rotation-x (/ Math/PI 4.))))]
         light (li/point-light (tu/point 10. 10. 10.) (co/color 1. 1. 1.))
-        world (wo/world [grp] [light])
+        world (wo/world grps [light])
         view (tr/view (tu/point 5. 10. 6.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
@@ -47,4 +51,4 @@
     (spit
       "./samples/groups_example.ppm"
       (clojure.string/join
-        "\n" (ca/ppm-rows (cm/render cam world {:parallel? true}))))))
+        "\n" (ca/ppm-rows (cm/render cam world))))))

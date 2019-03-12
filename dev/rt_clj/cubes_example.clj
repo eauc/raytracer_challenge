@@ -45,7 +45,7 @@
         view (tr/view (tu/point 7. 9. 5.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        cam (cm/camera 400 300 (/ Math/PI 3) view)
-        cv (cm/render cam world)]
+        resolution 4
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/cubes_example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv)))))
+          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))

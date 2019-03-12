@@ -3,6 +3,7 @@
             [rt-clj.colors :as co]
             [rt-clj.intersections :as in]
             [rt-clj.rays :as ra]
+            [rt-clj.shapes :as sh]
             [rt-clj.spheres :as sp]
             [rt-clj.transformations :as tr]
             [rt-clj.tuples :as tu]))
@@ -26,7 +27,7 @@
                                                       (+ -3. (* j pixel-step-h)))
                                    ray-d (tu/sub screen-p o)
                                    ray (ra/ray o ray-d)]
-                               (in/hit (sp/intersect s ray)))) (range w))) (range h))
+                               (in/hit (sh/intersect s ray)))) (range w))) (range h))
         cv (reduce (fn [c i]
                      (reduce (fn [c j]
                                (ca/assoc-at c i j (if (get-in hits [i j])

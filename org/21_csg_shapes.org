@@ -34,24 +34,13 @@
 
   #+NAME: csg_create
   #+BEGIN_SRC clojure
-  (defrecord CsgShape [transform inverse-t trans-inverse-t operation left right]
-    sh/Shape
-    (sh/intersect [sh ray]
-      (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p hit]
-      (sh/normal' sh world-p hit identity)))
-
-
   (defn csg
     ([transform operation left right]
-     (let [inverse-t (m/inverse transform)
-           shape (map->CsgShape
-                   {:operation operation
-                    :left left
-                    :right right
-                    :transform transform
-                    :inverse-t inverse-t
-                    :trans-inverse-t (m/transpose inverse-t)})]
+     (let [shape (-> (sh/shape local-intersect identity transform)
+                     (assoc
+                       :operation operation
+                       :left left
+                       :right right))]
        (assoc shape
               :left (assoc left :parent shape)
               :right (assoc right :parent shape))))

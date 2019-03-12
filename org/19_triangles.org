@@ -33,26 +33,15 @@
 
   #+NAME: tris_create
   #+BEGIN_SRC clojure
-  (defrecord Triangle [p1 p2 p3 e1 e2 normal material transform inverse-t trans-inverse-t]
-    sh/Shape
-    (sh/intersect [sh ray]
-      (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p hit]
-      (sh/normal' sh world-p hit local-normal)))
-
-
   (defn triangle
     ([p1 p2 p3 material]
      (let [e1 (t/sub p2 p1)
            e2 (t/sub p3 p1)]
-       (map->Triangle
-         {:p1 p1 :p2 p2 :p3 p3
-          :e1 e1 :e2 e2
-          :normal (t/norm (t/cross e2 e1))
-          :material material
-          :transform (m/id 4)
-          :inverse-t (m/inverse (m/id 4))
-          :trans-inverse-t (m/transpose (m/inverse (m/id 4)))})))
+       (-> (sh/shape local-intersect local-normal (m/id 4) material)
+           (assoc
+             :p1 p1 :p2 p2 :p3 p3
+             :e1 e1 :e2 e2
+             :normal (t/norm (t/cross e2 e1))))))
     ([p1 p2 p3]
      (triangle p1 p2 p3 mr/default-material)))
   #+END_SRC
@@ -203,29 +192,15 @@
            (t/mul n3 v)))
 
 
-  (defrecord SmoothTriangle [p1 p2 p3
-                             n1 n2 n3
-                             e1 e2
-                             material transform inverse-t trans-inverse-t]
-    sh/Shape
-    (sh/intersect [sh ray]
-      (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p hit]
-      (sh/normal' sh world-p hit smooth-local-normal)))
-
-
   (defn smooth-triangle
     ([p1 p2 p3 n1 n2 n3 material]
      (let [e1 (t/sub p2 p1)
            e2 (t/sub p3 p1)]
-       (map->SmoothTriangle
-         {:p1 p1 :p2 p2 :p3 p3
-          :n1 n1 :n2 n2 :n3 n3
-          :e1 e1 :e2 e2
-          :material material
-          :transform (m/id 4)
-          :inverse-t (m/inverse (m/id 4))
-          :trans-inverse-t (m/transpose (m/inverse (m/id 4)))})))
+       (-> (sh/shape local-intersect smooth-local-normal (m/id 4) material)
+           (assoc
+             :p1 p1 :p2 p2 :p3 p3
+             :n1 n1 :n2 n2 :n3 n3
+             :e1 e1 :e2 e2))))
     ([p1 p2 p3 n1 n2 n3]
      (smooth-triangle p1 p2 p3
                       n1 n2 n3

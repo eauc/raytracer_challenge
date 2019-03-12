@@ -10,25 +10,13 @@
 
   #+NAME: cones_create
   #+BEGIN_SRC clojure
-  (defrecord Cone [closed? minimum maximum material transform inverse-t trans-inverse-t]
-    sh/Shape
-    (sh/intersect [sh ray]
-      (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p hit]
-      (sh/normal' sh world-p hit local-normal)))
-
-
   (defn cone
     ([transform material]
-     (let [inverse-t (m/inverse transform)]
-       (map->Cone
-         {:closed? false
-          :minimum (- t/infinity)
-          :maximum t/infinity
-          :material material
-          :transform transform
-          :inverse-t inverse-t
-          :trans-inverse-t (m/transpose inverse-t)})))
+     (-> (sh/shape local-intersect local-normal transform material)
+         (assoc
+           :closed? false
+           :minimum (- t/infinity)
+           :maximum t/infinity)))
     ([transform]
      (cone transform mr/default-material))
     ([]

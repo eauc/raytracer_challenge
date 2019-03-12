@@ -12,25 +12,8 @@
 
   #+NAME: planes_create
   #+BEGIN_SRC clojure
-  (defrecord Plane [material transform inverse-t trans-inverse-t]
-    sh/Shape
-    (sh/intersect [sh ray]
-      (sh/intersect' sh ray local-intersect))
-    (sh/normal [sh world-p hit]
-      (sh/normal' sh world-p hit local-normal)))
-
-  (defn plane
-    ([transform material]
-     (let [inverse-t (m/inverse transform)]
-       (map->Plane
-         {:material material
-          :transform transform
-          :inverse-t inverse-t
-          :trans-inverse-t (m/transpose inverse-t)})))
-    ([transform]
-     (plane transform mr/default-material))
-    ([]
-     (plane (m/id 4) mr/default-material)))
+  (def plane
+    (partial sh/shape local-intersect local-normal))
   #+END_SRC
 
   Planes has a transform property.
