@@ -13,7 +13,7 @@
   #+NAME: planes_create
   #+BEGIN_SRC clojure
   (def plane
-    (partial sh/shape local-intersect local-normal))
+    (partial sh/shape local-bounds local-intersect local-normal))
   #+END_SRC
 
   Planes has a transform property.
@@ -38,6 +38,16 @@
     (is (= mr/default-material
            (:material (plane)))))
   #+END_SRC
+
+* Bounds
+
+  #+NAME: planes_bounds
+  #+BEGIN_SRC clojure
+  (def local-bounds
+    (constantly {:min (t/point (- t/infinity) (- t/epsilon) (- t/infinity))
+                 :max (t/point t/infinity t/epsilon t/infinity)}))
+  #+END_SRC
+
 
 * Intersections
 
@@ -129,6 +139,9 @@
               [rt-clj.rays :as r]
               [rt-clj.shapes :as sh]
               [rt-clj.tuples :as t]))
+
+
+  <<planes_bounds>>
 
 
   <<planes_ray_int>>

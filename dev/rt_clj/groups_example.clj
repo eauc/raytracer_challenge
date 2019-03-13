@@ -13,7 +13,8 @@
             [rt-clj.tuples :as tu]
             [rt-clj.worlds :as wo]
             [rt-clj.planes :as pl]
-            [rt-clj.colors :as c])
+            [rt-clj.colors :as c]
+            [rt-clj.time :as rtt])
   (:import java.lang.Math))
 
 
@@ -48,7 +49,9 @@
                       (tu/vector 0. 0. 1.))
         resolution 4
         cam (cm/camera (* 150 resolution) (* 100 resolution) (/ Math/PI 3) view)]
+    (rtt/reset)
     (spit
       "./samples/groups_example.ppm"
       (clojure.string/join
-        "\n" (ca/ppm-rows (cm/render cam world))))))
+        "\n" (rtt/rt-time :total (ca/ppm-rows (cm/render cam world)))))
+    @rtt/records))

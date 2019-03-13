@@ -13,8 +13,18 @@ file:../samples/cubes_example.png]]
   #+NAME: cubes_create
   #+BEGIN_SRC clojure
   (def cube
-    (partial sh/shape local-intersect local-normal))
+    (partial sh/shape local-bounds local-intersect local-normal))
   #+END_SRC
+
+* Bounds
+
+  #+NAME: cubes_bounds
+  #+BEGIN_SRC clojure
+  (def local-bounds
+    (constantly {:min (t/point -1. -1. -1.)
+                 :max (t/point 1. 1. 1.)}))
+  #+END_SRC
+
 
 * Intersections
 
@@ -51,9 +61,9 @@ file:../samples/cubes_example.png]]
   #+NAME: cubes_ints
   #+BEGIN_SRC clojure
   (defn check-axis
-    [origin direction]
-    (let [t-min-numerator (- -1 origin)
-          t-max-numerator (- 1 origin)
+    [origin direction [min max]]
+    (let [t-min-numerator (- min origin)
+          t-max-numerator (- max origin)
           parallel? (< (Math/abs direction) t/epsilon)
           t-min (if parallel?
                   (* t-min-numerator t/infinity)
@@ -67,16 +77,18 @@ file:../samples/cubes_example.png]]
 
 
   (defn local-intersect
-    [c {:keys [origin direction] :as ray}]
-    (let [[x-t-min x-t-max] (check-axis (t/x origin) (t/x direction))
-          [y-t-min y-t-max] (check-axis (t/y origin) (t/y direction))
-          [z-t-min z-t-max] (check-axis (t/z origin) (t/z direction))
-          t-min (max x-t-min y-t-min z-t-min)
-          t-max (min x-t-max y-t-max z-t-max)]
+    [{:keys [local-bounds] :as cube} {:keys [origin direction] :as ray}]
+    (let [{:keys [min max]} (local-bounds cube)
+          [[x-min y-min z-min] [x-max y-max z-max]] (map (juxt t/x t/y t/z) [min max])
+          [x-t-min x-t-max] (check-axis (t/x origin) (t/x direction) [x-min x-max])
+          [y-t-min y-t-max] (check-axis (t/y origin) (t/y direction) [y-min y-max])
+          [z-t-min z-t-max] (check-axis (t/z origin) (t/z direction) [z-min z-max])
+          t-min (clojure.core/max x-t-min y-t-min z-t-min)
+          t-max (clojure.core/min x-t-max y-t-max z-t-max)]
       (if (> t-min t-max)
         []
-        [(i/intersection t-min c)
-         (i/intersection t-max c)])))
+        [(i/intersection t-min cube)
+         (i/intersection t-max cube)])))
   #+END_SRC
 
 * Normal
@@ -126,6 +138,9 @@ file:../samples/cubes_example.png]]
               [rt-clj.materials :as mr]
               [rt-clj.shapes :as sh]
               [rt-clj.tuples :as t]))
+
+
+  <<cubes_bounds>>
 
 
   <<cubes_ints>>

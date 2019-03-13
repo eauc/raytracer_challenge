@@ -37,13 +37,24 @@
     ([p1 p2 p3 material]
      (let [e1 (t/sub p2 p1)
            e2 (t/sub p3 p1)]
-       (-> (sh/shape local-intersect local-normal (m/id 4) material)
+       (-> (sh/shape local-bounds local-intersect local-normal (m/id 4) material)
            (assoc
              :p1 p1 :p2 p2 :p3 p3
              :e1 e1 :e2 e2
              :normal (t/norm (t/cross e2 e1))))))
     ([p1 p2 p3]
      (triangle p1 p2 p3 mr/default-material)))
+  #+END_SRC
+
+* Bounds
+
+  #+NAME: tris_bounds
+  #+BEGIN_SRC clojure
+  (defn local-bounds
+    [{:keys [p1 p2 p3] :as triangle}]
+    (let [[[x1 y1 z1] [x2 y2 z2] [x3 y3 z3]] (map (juxt t/x t/y t/z) [p1 p2 p3])]
+      {:min (t/point (min x1 x2 x3) (min y1 y2 y3) (min z1 z2 z3))
+       :max (t/point (max x1 x2 x3) (max y1 y2 y3) (max z1 z2 z3))}))
   #+END_SRC
 
 * Intersection
@@ -196,7 +207,7 @@
     ([p1 p2 p3 n1 n2 n3 material]
      (let [e1 (t/sub p2 p1)
            e2 (t/sub p3 p1)]
-       (-> (sh/shape local-intersect smooth-local-normal (m/id 4) material)
+       (-> (sh/shape local-bounds local-intersect smooth-local-normal (m/id 4) material)
            (assoc
              :p1 p1 :p2 p2 :p3 p3
              :n1 n1 :n2 n2 :n3 n3
@@ -220,6 +231,9 @@
               [rt-clj.materials :as mr]
               [rt-clj.shapes :as sh]
               [rt-clj.tuples :as t]))
+
+
+  <<tris_bounds>>
 
 
   <<tris_int>>

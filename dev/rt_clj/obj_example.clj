@@ -11,7 +11,8 @@
             [rt-clj.triangles :as tg]
             [rt-clj.transformations :as tr]
             [rt-clj.tuples :as tu]
-            [rt-clj.worlds :as wo])
+            [rt-clj.worlds :as wo]
+            [rt-clj.time :as rtt])
   (:import java.lang.Math))
 
 (comment
@@ -35,10 +36,12 @@
                       (tu/vector 0. 0. 1.))
         resolution 4
         cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
+    (rtt/reset)
     (spit "./samples/obj_teapot_low_example.ppm"
           (clojure.string/join
             "\n"
-            (ca/ppm-rows (cm/render cam world {:parallel? true})))))
+            (rtt/rt-time :total (ca/ppm-rows (cm/render cam world {:parallel? true})))))
+    @rtt/records)
 
   (let [floor (pl/plane (tr/rotation-x (/ Math/PI 2.))
                         (assoc mr/default-material
@@ -58,9 +61,13 @@
         view (tr/view (tu/point 20. 40. 20.)
                       (tu/point 0. 0. 5.)
                       (tu/vector 0. 0. 1.))
-        resolution 3
-        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
+        resolution 8
+        cam (cm/camera (* resolution 75) (* resolution 50) (/ Math/PI 3) view)]
+    (rtt/reset)
     (spit "./samples/obj_teapot_example.ppm"
           (clojure.string/join
             "\n"
-            (ca/ppm-rows (cm/render cam world {:depth 2 :parallel? true}))))))
+            (rtt/rt-time
+              :total
+              (ca/ppm-rows (cm/render cam world {:depth 2 :parallel? true})))))
+    @rtt/records))

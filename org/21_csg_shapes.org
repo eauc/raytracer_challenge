@@ -36,7 +36,8 @@
   #+BEGIN_SRC clojure
   (defn csg
     ([transform operation left right]
-     (let [shape (-> (sh/shape local-intersect identity transform)
+     (let [local-bounds (constantly (gr/children-bounds [left right]))
+           shape (-> (sh/shape local-bounds local-intersect identity transform)
                      (assoc
                        :operation operation
                        :left left
@@ -198,8 +199,10 @@
 
   #+BEGIN_SRC clojure :tangle ../src/rt_clj/csg_shapes.clj
   (ns rt-clj.csg-shapes
-    (:require [rt-clj.matrices :as m]
-              [rt-clj.shapes :as sh]))
+    (:require [rt-clj.groups :as gr]
+              [rt-clj.matrices :as m]
+              [rt-clj.shapes :as sh]
+              [rt-clj.tuples :as t]))
 
 
   <<csg_int>>

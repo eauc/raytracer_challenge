@@ -109,7 +109,7 @@
         view (tr/view (tu/point 0. 10. 3.)
                       (tu/point 0. 0. 0.)
                       (tu/vector 0. 0. 1.))
-        resolution 2
+        resolution 4
         cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./samples/fresnel_example.ppm"
           (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))

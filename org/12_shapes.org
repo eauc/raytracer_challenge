@@ -9,18 +9,81 @@
   #+NAME: shapes_create
   #+BEGIN_SRC clojure
   (defn shape
-    ([local-intersect local-normal transform material]
+    ([local-bounds local-intersect local-normal transform material]
      (let [inverse-t (m/inverse transform)]
-       {:local-intersect local-intersect
+       {:local-bounds local-bounds
+        :local-intersect local-intersect
         :local-normal local-normal
         :material material
         :transform transform
         :inverse-t inverse-t
         :trans-inverse-t (m/transpose inverse-t)}))
-    ([local-intersect local-normal transform]
-     (shape local-intersect local-normal transform mr/default-material))
-    ([local-intersect local-normal]
-     (shape local-intersect local-normal (m/id 4) mr/default-material)))
+    ([local-bounds local-intersect local-normal transform]
+     (shape local-bounds local-intersect local-normal transform mr/default-material))
+    ([local-bounds local-intersect local-normal]
+     (shape local-bounds local-intersect local-normal (m/id 4) mr/default-material)))
+  #+END_SRC
+
+* Bounds
+
+  To calculate the world-boudaries of a shape:
+  - calculate all 8 corners of the boundaries in local space.
+  - transform each corner into world space.
+  - take the min and max of all =x, y, z= coordinates.
+
+  #+NAME: shapes_bounds_test
+  #+BEGIN_SRC clojure
+  (testing "Boundaries of a sphere with translation"
+    (is (= {:min (t/point -0.5 0. 0.5)
+            :max (t/point 1.5 2. 2.5)}
+           (bounds (s/sphere (tr/translation 0.5 1. 1.5))))))
+
+  (testing "Boundaries of a sphere with rotation"
+    (let [bs (bounds (s/sphere (tr/rotation-x (/ Math/PI 4.))))]
+      (is (t/eq? (t/point 1. (Math/sqrt 2.) (Math/sqrt 2.))
+                 (:max bs)))
+      (is (t/eq? (t/point -1. (- (Math/sqrt 2.)) (- (Math/sqrt 2.)))
+                 (:min bs)))))
+
+  (testing "Boundaries of a cube with scaling"
+    (is (= {:min (t/point -0.5 -1.5 -2.)
+            :max (t/point 0.5 1.5 2.)}
+           (bounds (cu/cube (tr/scaling 0.5 1.5 2.))))))
+
+  (testing "Boundaries of a triangle"
+    (is (= {:min (t/point -1. -2. -3.)
+            :max (t/point 3. 2. -1.)}
+           (bounds (tg/triangle (t/point -1. -2. -3.)
+                                (t/point 1. 2. -3.)
+                                (t/point 3. -2. -1.))))))
+  #+END_SRC
+
+  #+NAME: shapes_bounds
+  #+BEGIN_SRC clojure
+  (defn bounds
+    [{:keys [local-bounds transform] :as shape}]
+    (let [{:keys [min max]} (local-bounds shape)
+          coords (juxt t/x t/y t/z)
+          [x-min y-min z-min] (coords min)
+          [x-max y-max z-max] (coords max)
+          corners (map #(m/mul transform %)
+                       [(t/point x-min y-min z-min)
+                        (t/point x-min y-min z-max)
+                        (t/point x-min y-max z-min)
+                        (t/point x-min y-max z-max)
+                        (t/point x-max y-min z-min)
+                        (t/point x-max y-min z-max)
+                        (t/point x-max y-max z-min)
+                        (t/point x-max y-max z-max)])
+          xs (map t/x corners)
+          ys (map t/y corners)
+          zs (map t/z corners)]
+      {:min (t/point (apply clojure.core/min xs)
+                     (apply clojure.core/min ys)
+                     (apply clojure.core/min zs))
+       :max (t/point (apply clojure.core/max xs)
+                     (apply clojure.core/max ys)
+                     (apply clojure.core/max zs))}))
   #+END_SRC
 
 * Intersections
@@ -132,6 +195,9 @@
   <<shapes_o2w>>
 
 
+  <<shapes_bounds>>
+
+
   <<shapes_ints>>
 
 
@@ -145,10 +211,12 @@
   (ns rt-clj.shapes-test
     (:require [clojure.test :refer :all]
               [rt-clj.shapes :refer :all]
+              [rt-clj.cubes :as cu]
               [rt-clj.groups :as gr]
               [rt-clj.rays :as r]
               [rt-clj.spheres :as s]
               [rt-clj.transformations :as tr]
+              [rt-clj.triangles :as tg]
               [rt-clj.tuples :as t]))
 
   (deftest shapes-test
@@ -157,5 +225,7 @@
 
     <<shapes_o2w_test>>
 
-    <<shapes_normal_test>>)
+    <<shapes_normal_test>>
+
+    <<shapes_bounds_test>>)
   #+END_SRC

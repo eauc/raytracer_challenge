@@ -13,12 +13,51 @@
   (defn group
     ([transform children]
      (with-children
-       (sh/shape local-intersect identity transform nil)
+       (sh/shape local-bounds local-intersect identity transform nil)
        children))
     ([transform]
      (group transform []))
     ([]
      (group (m/id 4) [])))
+  #+END_SRC
+
+* Bounds
+
+  #+NAME: groups_bounds_test
+  #+BEGIN_SRC clojure
+  (testing "The boundaries of a group are the union of its children"
+    (let [gr (with-children (group)
+               [(s/sphere (tr/translation 1. 2. 3.))
+                (s/sphere (tr/scaling 0.5 1.5 0.5))
+                (s/sphere (tr/rotation-x (/ Math/PI 4.)))])
+          bs ((:local-bounds gr) gr)]
+      (is (t/eq? (t/point -1. -1.5 (- (Math/sqrt 2.)))
+                 (:min bs)))
+      (is (= (t/point 2. 3. 4.)
+                 (:max bs)))))
+  #+END_SRC
+
+  #+NAME: groups_bounds
+  #+BEGIN_SRC clojure
+  (def local-bounds
+    (constantly {:min (t/point (- t/epsilon) (- t/epsilon) (- t/epsilon))
+                 :max (t/point t/epsilon t/epsilon t/epsilon)}))
+
+  (defn children-bounds
+    [cs]
+    (let [bs (map sh/bounds cs)
+          min-xs (map (comp t/x :min) bs)
+          min-ys (map (comp t/y :min) bs)
+          min-zs (map (comp t/z :min) bs)
+          max-xs (map (comp t/x :max) bs)
+          max-ys (map (comp t/y :max) bs)
+          max-zs (map (comp t/z :max) bs)]
+      {:min (t/point (apply min min-xs)
+                     (apply min min-ys)
+                     (apply min min-zs))
+       :max (t/point (apply max max-xs)
+                     (apply max max-ys)
+                     (apply max max-zs))}))
   #+END_SRC
 
 * Children
@@ -45,8 +84,11 @@
       (assoc new-sh :children (mapv #(with-parent % new-sh) (:children new-sh)))))
 
   (defn with-children
-    [g cs]
-    (assoc g :children (mapv #(with-parent % g) cs)))
+    [gr cs]
+    (let [new-gr (cond-> gr
+                   (not (empty? cs))
+                   (assoc :local-bounds (constantly (children-bounds cs))))]
+      (assoc new-gr :children (mapv #(with-parent % new-gr) cs))))
   #+END_SRC
 
 * Intersections
@@ -88,10 +130,13 @@
   #+BEGIN_SRC clojure
   (defn local-intersect
     [{:keys [children] :as g} r]
-    (into []
-          (sort-by :t
-                   (reduce (fn [ints c]
-                             (concat ints (sh/intersect c r))) '() children))))
+    (let [bounds-miss? (empty? (cu/local-intersect g r))]
+      (if bounds-miss?
+        []
+        (into []
+              (sort-by :t
+                       (reduce (fn [ints c]
+                                 (concat ints (sh/intersect c r))) '() children))))))
   #+END_SRC
 
 * Files                                                            :noexport:
@@ -103,10 +148,14 @@
   (ns rt-clj.groups
     (:import java.lang.Math)
     (:require [rt-clj.intersections :as i]
+              [rt-clj.cubes :as cu]
               [rt-clj.matrices :as m]
               [rt-clj.materials :as mr]
               [rt-clj.shapes :as sh]
               [rt-clj.tuples :as t]))
+
+
+  <<groups_bounds>>
 
 
   <<groups_children>>
@@ -132,5 +181,7 @@
 
     <<groups_children_test>>
 
-    <<groups_ints_test>>)
+    <<groups_ints_test>>
+
+    <<groups_bounds_test>>)
   #+END_SRC

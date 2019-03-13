@@ -12,7 +12,7 @@
   #+BEGIN_SRC clojure
   (defn cone
     ([transform material]
-     (-> (sh/shape local-intersect local-normal transform material)
+     (-> (sh/shape local-bounds local-intersect local-normal transform material)
          (assoc
            :closed? false
            :minimum (- t/infinity)
@@ -21,6 +21,18 @@
      (cone transform mr/default-material))
     ([]
      (cone (m/id 4) mr/default-material)))
+  #+END_SRC
+
+* Bounds
+
+  #+NAME: cones_bounds
+  #+BEGIN_SRC clojure
+  (defn local-bounds
+    [{:keys [minimum maximum] :as cone}]
+    (let [max-abs (max (Math/abs minimum)
+                       (Math/abs maximum))]
+      {:min (t/point (- max-abs) minimum (- max-abs))
+       :max (t/point max-abs maximum max-abs)}))
   #+END_SRC
 
 * Intersections
@@ -171,6 +183,9 @@
               [rt-clj.materials :as mr]
               [rt-clj.shapes :as sh]
               [rt-clj.tuples :as t]))
+
+
+  <<cones_bounds>>
 
 
   <<cones_closed>>
