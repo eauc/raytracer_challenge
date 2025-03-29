@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 
-for file in ./samples/*.ppm
+for file in ./examples/img/*.ppm
 do
-    convert $file ${file/.ppm/.png}
+    echo "Converting $file"
+    convert $file "${file%.ppm}.png"
 done

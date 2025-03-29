@@ -1,10 +1,5 @@
 #kaocha/v1
-{:tests [{:id :unit
-          :test-paths ["test"]
-          :source-paths ["src"]
-          :ns-patterns ["-test$"]}]
- :color? true
- :randomize? false
+{:randomize? false
  :reporter [kaocha.report/documentation]
- :plugins [:kaocha.plugin/hooks]
- :kaocha.hooks/post-load [rt-clj.repl/test-post-load-hook]}
+ :plugins [:hooks]
+ :kaocha.hooks/post-load [user/test-post-load-hook]}

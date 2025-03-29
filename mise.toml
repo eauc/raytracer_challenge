@@ -1,0 +1,4 @@
+[tools]
+babashka = "latest"
+clojure = "1.10"
+java = "latest"

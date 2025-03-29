@@ -1,0 +1,100 @@
+(ns rt-clj.triangles-test
+  (:require [clojure.test :refer :all]
+            [rt-clj.triangles :refer :all]
+            [rt-clj.intersections :as i]
+            [rt-clj.shapes :as sh]
+            [rt-clj.rays :as r]
+            [rt-clj.tuples :as t]))
+
+(deftest triangles-test
+
+  (testing "Constructing a triangle"
+    (let [ p1 (t/point 0. 1. 0.)
+          p2 (t/point -1. 0. 0.)
+          p3 (t/point 1. 0. 0.)
+          t (triangle p1 p2 p3)]
+      (is (= p1
+             (:p1 t)))
+      (is (= p2
+             (:p2 t)))
+      (is (= p3
+             (:p3 t)))
+      (is (= (t/vector -1. -1. 0.)
+             (:e1 t)))
+      (is (= (t/vector 1. -1. 0.)
+             (:e2 t)))
+      (is (= (t/vector 0. 0. -1.)
+             (:normal t)))))
+
+  (testing "Intersecting a ray parallel to the triangle"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 0. -1. -2.) (t/vector 0. 1. 0.))]
+      (is (= []
+             (local-intersect tri ray)))))
+  
+  (testing "A ray misses the p1-p3 edge"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 1. 1. -2.) (t/vector 0. 0. 1.))]
+      (is (= []
+             (local-intersect tri ray)))))
+  
+  (testing "A ray misses the p1-p2 edge"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point -1. 1. -2.) (t/vector 0. 0. 1.))]
+      (is (= []
+             (local-intersect tri ray)))))
+  
+  (testing "A ray misses the p2-p3 edge"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 0. -1. -2.) (t/vector 0. 0. 1.))]
+      (is (= []
+             (local-intersect tri ray)))))
+  
+  (testing "A ray strikes a triangle"
+    (let [tri (triangle (t/point 0. 1. 0.)
+                        (t/point -1. 0. 0.)
+                        (t/point 1. 0. 0.))
+          ray (r/ray (t/point 0. 0.5 -2.) (t/vector 0. 0. 1.))]
+      (is (= [2.]
+             (map :t (local-intersect tri ray))))))
+  
+  (testing "An intersection with a smooth triangle stores u/v"
+    (let [tri (triangle (t/point 0. 1. 0.) (t/point -1. 0. 0.) (t/point 1. 0. 0.))
+          ray (r/ray (t/point -0.2 0.3 -2.) (t/vector 0. 0. 1.))
+          [hit] (local-intersect tri ray)]
+      (is (t/close? 0.45
+                    (:u hit)))
+      (is (t/close? 0.25
+                    (:v hit)))))
+
+  (testing "Finding the normal on a triangle"
+    (let [ tri (triangle (t/point 0. 1. 0.)
+                         (t/point -1. 0. 0.)
+                         (t/point 1. 0. 0.))]
+      (is (= (:normal tri)
+             (local-normal tri (t/point 0. 0.5 0.) {})))
+      (is (= (:normal tri)
+             (local-normal tri (t/point -0.5 0.75 0.) {})))
+      (is (= (:normal tri)
+             (local-normal tri (t/point 0.5 0.25 0.) {})))))
+
+  (let [tri (smooth-triangle
+              (t/point 0. 1. 0.)
+              (t/point -1. 0. 0.)
+              (t/point 1. 0. 0.)
+              (t/vector 0. 1. 0.)
+              (t/vector -1. 0. 0.)
+              (t/vector 1. 0. 0.))]
+    (testing "A smooth triangle uses u/v to interpolate the normal"
+      (let [hit (assoc (i/intersection 1. tri)
+                       :u 0.45 :v 0.25)]
+        (is (t/eq? (t/vector -0.554700 0.832050 0.)
+                   (sh/normal tri (t/point 0. 0. 0.) hit)))))))

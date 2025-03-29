@@ -1,0 +1,27 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.10.0"}
+        expound/expound {:mvn/version "0.7.2"}}
+
+ :aliases {:dev {:extra-paths ["dev" "examples" "test"]
+                 :jvm-opts ["-Xss8m"]
+                 :extra-deps {orchestra/orchestra {:mvn/version "2019.02.06-1"}
+                              org.clojure/tools.namespace {:mvn/version "0.2.11"}
+                              io.github.nextjournal/clerk {:mvn/version "0.17.1102"}}}
+
+           :build-doc {:exec-fn nextjournal.clerk/build!
+                       :exec-args {:paths ["examples/rt_clj/**" "src/**"]}}
+
+           :serve-doc {:deps {org.babashka/http-server {:mvn/version "0.1.13"}}
+                       :exec-fn babashka.http-server/exec
+                       :exec-args {:port 7777
+                                   :dir "public/build"}}
+
+           :watch-doc {:exec-fn nextjournal.clerk/serve!
+                       :exec-args {:browse? true
+                                   :paths ["examples/rt_clj/**" "src/**"]
+                                   :watch-paths ["examples/rt_clj" "src"]}}
+
+           :repl {:extra-deps {nrepl/nrepl {:mvn/version "0.9.0"}}}
+
+           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
+                  :main-opts ["-m" "kaocha.runner"]}}}
