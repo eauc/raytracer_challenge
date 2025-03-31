@@ -22,11 +22,11 @@
 ; We can access the size of each pixels, computed from the greatest of hsize & vsize, and the field of view.
 
 (defn camera
-  ([hs vs fov transform]
+  ([^long hs ^long vs ^double fov transform]
    (let [half-view (Math/tan (/ fov 2.))
-         aspect (/ hs vs)
-         half-width (if (>= aspect 1) half-view (* half-view aspect))
-         half-height (if (>= aspect 1) (/ half-view aspect) half-view)
+         aspect (double (/ hs vs))
+         half-width (if (>= aspect 1.) half-view (* half-view aspect))
+         half-height (if (>= aspect 1.) (/ half-view aspect) half-view)
          pixel-size (/ (* half-width 2) hs)]
      {:hsize hs
       :vsize vs
@@ -47,7 +47,7 @@
 ; - the ray's origin is the world origin.
 ; - the ray's direction is the vector from the world-origin to the world-pixel.
 
-(defn pixel-ray [{:keys [half-width half-height pixel-size inverse-t]} px py]
+(defn pixel-ray [{:keys [^double half-width ^double half-height ^double pixel-size inverse-t]} ^double px ^double py]
   (let [cam-x (- half-width (* (+ px 0.5) pixel-size))
         cam-y (- half-height (* (+ py 0.5) pixel-size))
         world-pixel (m/mul inverse-t (t/point cam-x cam-y -1.))
@@ -62,8 +62,8 @@
 (def default-depth 4)
 
 (defn render
-  ([{:keys [hsize vsize] :as cam} world
-    {:keys [parallel?] :or {parallel? true}}]
+  ([{:keys [^long hsize ^long vsize] :as cam} world
+    {:keys [parallel?] :or {parallel? false}}]
    (if parallel?
      (cr/fold
        (int (/ vsize 8))

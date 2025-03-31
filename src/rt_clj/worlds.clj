@@ -61,8 +61,8 @@
         ray (r/ray p (t/norm p->l))
         hits (filter #(get-in % [:object :material :shadow?] true)
                      (intersect w ray))
-        hit? (i/hit hits)]
-    (boolean (and hit? (> d (:t hit?))))))
+        {:keys [^double t]} (i/hit hits)]
+    (boolean (and t (> d t)))))
 
 ; ## Reflection
 
@@ -71,7 +71,7 @@
 (declare color)
 
 (defn reflected-color
-  [world hit remaining]
+  [world hit ^long remaining]
   (let [reflective (get-in hit [:object :material :reflective])]
     (if (or (>= 0 remaining)
             (= 0. reflective))
@@ -96,12 +96,12 @@
 ; - if this is superior to 1, we have total internal refaction
 
 (defn refracted-color
-  [world hit remaining]
+  [world hit ^long remaining]
   (if (or (= 0 remaining)
           (= 0. (get-in hit [:object :material :transparency])))
     [c/black 1.]
     (let [{:keys [normalv eyev under-point]} hit
-          [n1 n2] (:n hit)
+          [^double n1 ^double n2] (:n hit)
           n-ratio (/ n1 n2)
           cos-i (t/dot eyev normalv)
           sin-t-square (* n-ratio n-ratio (- 1 (* cos-i cos-i)))]
@@ -130,8 +130,8 @@
                   (c/color 0. 0. 0.)
                   (:lights w))
         reflected (reflected-color w h remaining)
-        [refracted reflectance] (refracted-color w h remaining)
-        {:keys [reflective transparency]} (get-in h [:object :material])]
+        [refracted ^double reflectance] (refracted-color w h remaining)
+        {:keys [^double reflective ^double transparency]} (get-in h [:object :material])]
     (if (and (> reflective 0.) (> transparency 0.))
       (c/add surface
              (c/add (c/mul reflected reflectance)

@@ -22,7 +22,10 @@
 ; We can find a hit in a list of intersections. It's always the lowest non-negative intersection.
 
 (defn hit [is]
-  (first (sort-by :t (filter #(< 0 (:t %)) is))))
+  (->> is
+       (filter (fn [{:keys [^double t]}] (< 0. t)))
+       (sort-by :t)
+       first))
 
 ; ## Refraction
 
@@ -90,7 +93,7 @@
 (defn schlick
   [hit]
   (let [{:keys [eyev normalv n]} hit
-        [n1 n2] n
+        [^double n1 ^double n2] n
         cos-i (t/dot eyev normalv)
         n-ratio (/ n1 n2)
         sin-t-square (* n-ratio n-ratio (- 1. (* cos-i cos-i)))]

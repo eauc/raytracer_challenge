@@ -14,13 +14,17 @@
 
 (def tuple clojure.core/vector)
 
-(def x first)
+(defn x ^double [v]
+  (first v))
 
-(def y second)
+(defn y ^double [v]
+  (second v))
 
-(def z #(nth % 2))
+(defn z ^double [v]
+  (nth v 2))
 
-(def w #(nth % 3))
+(defn w ^double [v]
+  (nth v 3))
 
 (defn point? [tup]
   (= 1.0 (w tup)))
@@ -44,12 +48,14 @@
 
 ; We need to define close equality for 2 floating-point scalars.
 
-(def epsilon 10e-6)
+(def epsilon
+  (double 10e-6))
 
-(def infinity 10e300)
+(def infinity
+  (double 10e300))
 
-(defn close? [a b]
-  (> epsilon (Math/abs (- a b))))
+(defn close? [^double a ^double b]
+  (> (double epsilon) (Math/abs (- a b))))
 
 ; Then we need close equality of 2 tuples.
 
@@ -66,19 +72,19 @@
 
 (def neg (partial sub zerov))
 
-(defn mul [v s]
-  (mapv #(* % s) v))
+(defn mul [v ^double s]
+  (mapv (fn [^double e] (* e s)) v))
 
-(defn div [v s]
-  (mapv #(/ % s) v))
+(defn div [v ^double s]
+  (mapv (fn [^double e] (/ e s)) v))
 
 ; We can get the dot and cross products of vectors.
 
-(defn dot [v w]
+(defn dot ^double [v w]
   (reduce + (map * v w)))
 
-(defn cross [[x1 y1 z1]
-             [x2 y2 z2]]
+(defn cross [[^double x1 ^double y1 ^double z1]
+             [^double x2 ^double y2 ^double z2]]
   (vector (- (* y1 z2)
              (* y2 z1))
           (- (* z1 x2)
@@ -88,7 +94,7 @@
 
 ; We can get the magnitude of a vector.
 
-(defn mag [v]
+(defn mag ^double [v]
   (Math/sqrt (dot v v)))
 
 ; We can normalize a vector.

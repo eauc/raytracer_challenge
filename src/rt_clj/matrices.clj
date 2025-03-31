@@ -42,7 +42,6 @@
 
 ; Element `[i,j]` is the dot product of A's row `[i]` & B's col `[j]`.
 
-
 (defn mul-tuple [m t]
   (mapv #(t/dot % t) m))
 
@@ -55,8 +54,13 @@
 
 ; Multiplying any matrix or tuple by the identity leaves them unchanged.
 
-(defn id [n]
-  (mapv #(vec (concat (repeat % 0.) [1.] (repeat (dec (- n %)) 0.))) (range n)))
+(defn id [^long n]
+  (mapv
+   (fn [^long i]
+     (vec (concat (repeat i 0.)
+                  [1.]
+                  (repeat (dec (- n i)) 0.))))
+   (range n)))
 
 ; ## Inversion
 
@@ -68,7 +72,7 @@
 
 ; A submatrice of A for element [i,j] is the matrix obtained by removing row i and col j of A.)
 
-(defn- drop-nth [v n]
+(defn- drop-nth [v ^long n]
   (vec (concat (subvec v 0 n) (subvec v (inc n)))))
 
 (defn subm [m i j]
@@ -80,15 +84,15 @@
 
 (declare det)
 
-(defn minor [m i j]
+(defn minor ^double [m i j]
   (det (subm m i j)))
 
 ; The cofactor of [i,j] is the minor of [i,j], negated if `i+j` is odd.
 
-(defn cofactor [m i j]
+(defn cofactor [m ^long i ^long j]
   (let [mi (minor m i j)]
     (if (odd? (+ i j))
-      (- 0 mi)
+      (- 0. mi)
       mi)))
 
 ; ### Determinant
@@ -104,7 +108,7 @@
   (let [w (width m)]
     (if (and (= 2 (height m))
              (= 2 w))
-      (let [[[a b][c d]] m]
+      (let [[[^double a ^double b] [^double c ^double d]] m]
         (- (* a d) (* b c)))
       (let [cofs (mapv #(cofactor m 0 %) (range w))]
         (t/dot (first m) cofs)))))

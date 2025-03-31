@@ -63,19 +63,21 @@
 ; - each element should be separated from its neighbors by a space.
 ; - the file should end with an empty line.
 
-(defn ppm-clamp [v]
+(defn ppm-clamp ^double [^double v]
   (min 1. (max 0. v)))
 
 (defn ppm-color [col]
-  (st/join " " (map #(Math/round (+ 0.49 (* 255 (ppm-clamp %)))) col)))
+  (->> col
+       (map (fn [^double v] (Math/round (+ 0.49 (* 255. (ppm-clamp v))))))
+       (st/join " ")))
 
 (defn ppm-data-row [row]
   (let [raw (st/join " " (map ppm-color row))]
     (loop [remaining raw
            rows []]
-      (if (> ppm-max-line-length (count remaining))
+      (if (> (long ppm-max-line-length) (count remaining))
         (conj rows remaining)
-        (let [split-index (st/last-index-of remaining " " ppm-max-line-length)]
+        (let [^long split-index (st/last-index-of remaining " " ppm-max-line-length)]
           (recur (subs remaining (inc split-index))
                  (conj rows (subs remaining 0 split-index))))))))
 
