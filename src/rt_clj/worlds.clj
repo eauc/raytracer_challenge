@@ -42,12 +42,12 @@
 ;
 ; We return the intersections in sorted order since this will help with some future algo.
 
+(defn hit-cmp [{^double ta :t} {^double tb :t}]
+  (< ta tb))
+
 (defn intersect [w ray]
-  (->> (:objects w)
-       (map #(sh/intersect % ray))
-       flatten
-       (sort-by :t)
-       vec))
+  (vec
+    (into (sorted-set-by hit-cmp) (mapcat #(sh/intersect % ray)) (:objects w))))
 
 ; ## Shadows
 

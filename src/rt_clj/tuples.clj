@@ -81,7 +81,14 @@
 ; We can get the dot and cross products of vectors.
 
 (defn dot ^double [v w]
-  (reduce + (map * v w)))
+  (let [c (min (count v) (count w))]
+      (loop [k 0
+             sum 0.]
+        (if (= k c)
+          sum
+          (let [^double a (nth v k)
+                ^double b (nth w k)]
+            (recur (inc k) (+ sum (* a b))))))))
 
 (defn cross [[^double x1 ^double y1 ^double z1]
              [^double x2 ^double y2 ^double z2]]
@@ -107,4 +114,5 @@
 ; Vectors can be reflected on a surface defined by a normal.
 
 (defn reflect [in normal]
-  (sub in (mul normal (* 2 (dot in normal)))))
+  (let [k (* 2. (dot in normal))]
+    (mapv (fn [^double i ^double n] (- i (* k n))) in normal)))

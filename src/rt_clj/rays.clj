@@ -3,8 +3,7 @@
 (ns rt-clj.rays
   {:nextjournal.clerk/visibility {:result :hide}
    :nextjournal.clerk/toc true}
-  (:require [rt-clj.matrices :as m]
-            [rt-clj.tuples :as t]))
+  (:require [rt-clj.matrices :as m]))
 
 ; ## Creation
 ;
@@ -18,8 +17,8 @@
 
 ; We can get the point at any distance from a ray's origin.
 
-(defn pos [r t]
-  (t/add (:origin r) (t/mul (:direction r) t)))
+(defn pos [{:keys [origin direction]} ^double t]
+  (mapv (fn [^double o ^double d] (+ o (* t d))) origin direction))
 
 ; ## Transformations
 

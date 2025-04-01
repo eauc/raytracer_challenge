@@ -72,8 +72,8 @@
         normalv (if inside? (t/sub t/zerov normalv') normalv')
         n (refractive-indices hit ints)]
     (assoc hit
-           :point (t/add point (t/mul normalv t/epsilon))
-           :under-point (t/sub point (t/mul normalv t/epsilon))
+           :point (mapv (fn [^double p ^double n] (+ p (* n (double t/epsilon)))) point normalv)
+           :under-point (mapv (fn [^double p ^double n] (- p (* n (double t/epsilon)))) point normalv)
            :eyev eyev
            :n n
            :normalv normalv
