@@ -21,19 +21,28 @@
 
 ; We can find a hit in a list of intersections. It's always the lowest non-negative intersection.
 
+(comment
+  (defn first-after [is after]
+    (let [c (count is)]
+      (loop [k 0
+             f-after nil]
+        (if (= k c)
+          f-after
+          (let [i (nth is k)]
+            (if (< after (:t i) (get f-after :t t/infinity))
+              (recur (+ k 1) i)
+              (recur (+ k 1) f-after))))))))
+
 (defn hit [is]
-  (->> is
-       (filter (fn [{:keys [^double t]}] (< 0. t)))
-       (sort-by :t)
-       first))
+  (first (filter #(< 0. ^double (:t %)) is)))
 
 ; ## Refraction
 
 ; We determine the refractive indices on each side of the intersection.
 
 (defn refractive-indices
-  [hit ints]
-  (loop [[current & rest] ints
+  [hit is]
+  (loop [[current & rest] is
          containers []]
     (let [is-hit? (= current hit)
           object (:object current)
@@ -65,15 +74,21 @@
 ; To avoid acne syndrome, the computation should slightly displace the hit points (by epsilon) toward the outside/inside of the object.
 
 (defn prepare-hit [hit ray ints]
-  (let [point (r/pos ray (:t hit))
+  (let [^"[D" point (r/pos ray (:t hit))
         normalv' (sh/normal (:object hit) point hit)
-        eyev (t/sub t/zerov (:direction ray))
+        eyev (t/neg (:direction ray))
         inside? (< (t/dot normalv' eyev) 0)
-        normalv (if inside? (t/sub t/zerov normalv') normalv')
+        ^"[D" normalv (if inside? (t/neg normalv') normalv')
         n (refractive-indices hit ints)]
     (assoc hit
-           :point (mapv (fn [^double p ^double n] (+ p (* n (double t/epsilon)))) point normalv)
-           :under-point (mapv (fn [^double p ^double n] (- p (* n (double t/epsilon)))) point normalv)
+           :point (let [p (aclone point)]
+                    (dotimes [k (alength p)]
+                      (aset p k (+ (aget point k) (* (double t/epsilon) (aget normalv k)))))
+                    p)
+           :under-point (let [p (aclone point)]
+                          (dotimes [k (alength p)]
+                            (aset p k (- (aget point k) (* (double t/epsilon) (aget normalv k)))))
+                          p)
            :eyev eyev
            :n n
            :normalv normalv

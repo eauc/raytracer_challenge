@@ -17,7 +17,7 @@
              (:vsize cam)))
       (is (= (/ Math/PI 2)
              (:fov cam)))
-      (is (= (m/id 4)
+      (is (m/eq? (m/id 4)
              (:transform cam)))))
 
   (testing "The pixel size for a horizontal canvas"
@@ -31,7 +31,7 @@
   (testing "Construct a ray through the center of the canvas"
     (let [cam (camera 201. 101 (/ Math/PI 2))
           ray (pixel-ray cam 100 50)]
-      (is (= (t/point 0. 0. 0.)
+      (is (t/eq? (t/point 0. 0. 0.)
              (:origin ray)))
       (is (t/eq? (t/vector 0. 0. -1.)
                  (:direction ray)))))
@@ -39,24 +39,24 @@
   (testing "Construct a ray through a corner of the canvas"
     (let [cam (camera 201. 101 (/ Math/PI 2))
           ray (pixel-ray cam 0 0)]
-      (is (= (t/point 0. 0. 0.)
+      (is (t/eq? (t/point 0. 0. 0.)
              (:origin ray)))
       (is (t/eq? (t/vector 0.66519 0.33259 -0.66851)
                  (:direction ray)))))
   
   (testing "Construct a ray when the camera is transformed"
-    (let [cam (camera 201. 101 (/ Math/PI 2)
+    (let [cam (camera 201 101 (/ Math/PI 2)
                       (m/mul (tr/rotation-y (/ Math/PI 4))
                              (tr/translation 0. -2. 5.)))
           ray (pixel-ray cam 100 50)]
-      (is (= (t/point 0. 2. -5.)
+      (is (t/eq? (t/point 0. 2. -5.)
              (:origin ray)))
       (is (t/eq? (t/vector (/ (Math/sqrt 2) 2) 0. (- (/ (Math/sqrt 2) 2)))
                  (:direction ray)))))
 
   (testing "Rendering a world with a camera"
     (let [world (w/default-world)
-          cam (camera 11. 11. (/ Math/PI 2)
+          cam (camera 11 11 (/ Math/PI 2)
                       (tr/view (t/point 0. 0. -5.)
                                (t/point 0. 0. 0.)
                                (t/vector 0. 1. 0.)))]

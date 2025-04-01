@@ -9,16 +9,30 @@
 
 ; Matrices are stored as simple vectors of rows.
 
-(def matrix identity)
+(defn matrix ^"[[D" [m]
+  (let [h (count m)
+        w (count (first m))
+        r (make-array Double/TYPE h w)]
+    (dotimes [i h]
+      (dotimes [j w]
+        (let [v ((m i) j)]
+          (aset r i j v))))
+    r))
 
-(def height count)
+(defn height ^long [^"[[D" m]
+  (alength m))
 
-(def width (comp count first))
+(defn width ^long [^"[[D" m]
+  (let [^"[D" r (aget m 0)]
+    (alength r)))
 
 ; We can inspect any element.
 
-(defn get-at [m i j]
-  (get-in m [i j]))
+(defn get-at ^double [^"[[D" m ^long i ^long j]
+  (aget ^"[D" (aget m i) j))
+
+(defn set-at [^"[[D" m ^long i ^long j ^double v]
+  (aset ^"[D" (aget m i) j v))
 
 ; ## Equality
 
@@ -31,10 +45,12 @@
 
 ; Invert the rows & cols of a matrix.
 
-(defn transpose [m]
-  (let [w (width m)]
-    (mapv (fn [col]
-            (mapv #(get % col) m)) (range w))))
+(defn transpose [^"[[D" m]
+  (let [r (make-array Double/TYPE (width m) (height m))]
+    (dotimes [j (height m)]
+      (dotimes [i (width m)]
+        (set-at r i j (get-at m j i))))
+    r))
 
 ; ## Multiplication
 
@@ -42,25 +58,37 @@
 
 ; Element `[i,j]` is the dot product of A's row `[i]` & B's col `[j]`.
 
-(defn mul-tuple [m t]
-  (mapv #(t/dot % t) m))
+(defn mul-t [^"[[D" m ^"[D" t]
+  (let [^"[D" r (aclone t)]
+    (dotimes [i (alength t)]
+      (let [c (t/dot (aget m i) t)]
+        (aset r i c)))
+    r))
 
-(defn mul [a b]
-  (if (not (vector? (first b)))
-    (mul-tuple a b)
-    (mapv #(mul-tuple (transpose b) %) a)))
+(defn mul [^"[[D" a ^"[[D" b]
+  (let [h (height a)
+        w (width b)
+        it (height b)
+        r (make-array Double/TYPE h w)]
+    (dotimes [i h]
+      (dotimes [j w]
+        (loop [k 0
+               sum 0.]
+          (if (= k it)
+            (set-at r i j sum)
+            (recur (inc k) (+ sum (* (get-at a i k) (get-at b k j))))))))
+    r))
 
 ; ### Indentity matrix
 
 ; Multiplying any matrix or tuple by the identity leaves them unchanged.
 
 (defn id [^long n]
-  (mapv
-   (fn [^long i]
-     (vec (concat (repeat i 0.)
-                  [1.]
-                  (repeat (dec (- n i)) 0.))))
-   (range n)))
+  (let [r (make-array Double/TYPE n n)]
+    (dotimes [i n]
+      (dotimes [j n]
+        (set-at r i j (if (= i j) 1. 0.))))
+    r))
 
 ; ## Inversion
 
@@ -72,11 +100,16 @@
 
 ; A submatrice of A for element [i,j] is the matrix obtained by removing row i and col j of A.)
 
-(defn- drop-nth [v ^long n]
-  (vec (concat (subvec v 0 n) (subvec v (inc n)))))
-
-(defn subm [m i j]
-  (mapv #(drop-nth % j) (drop-nth m i)))
+(defn subm [^"[[D" m ^long l ^long c]
+  (let [h (dec (height m))
+        w (dec (width m))
+        r (make-array Double/TYPE h w)]
+    (dotimes [i h]
+      (dotimes [j w]
+        (set-at r i j (get-at m
+                              (if (< i l) i (inc i))
+                              (if (< j c) j (inc j))))))
+    r))
 
 ; ### Minors & Cofactors
 ;
@@ -89,7 +122,7 @@
 
 ; The cofactor of [i,j] is the minor of [i,j], negated if `i+j` is odd.
 
-(defn cofactor [m ^long i ^long j]
+(defn cofactor ^double [m ^long i ^long j]
   (let [mi (minor m i j)]
     (if (odd? (+ i j))
       (- 0. mi)
@@ -104,38 +137,51 @@
 ; - we calculate the vector of the cofactors for each element of the first row.
 ; - the determinant is the dot product of the first row with the cofactors vector.
 
-(defn det [m]
+(defn det [^"[[D" m]
   (let [w (width m)]
     (if (and (= 2 (height m))
              (= 2 w))
-      (let [[[^double a ^double b] [^double c ^double d]] m]
-        (- (* a d) (* b c)))
-      (let [cofs (mapv #(cofactor m 0 %) (range w))]
-        (t/dot (first m) cofs)))))
+      (- (* (get-at m 0 0)
+            (get-at m 1 1))
+         (* (get-at m 0 1)
+            (get-at m 1 0)))
+      (loop [k 0
+             d 0.]
+        (if (= k w)
+          d
+          (recur (+ k 1) (+ d (* (get-at m 0 k) (cofactor m 0 k)))))))))
 
 ; ### Inverse
+
+; A matrix is invertible if the determinant is not 0.
+
+(defn invertible? [m]
+  (not (t/close? 0 (det m))))
 
 ; To calculate the inverse of a matrix:
 ; - we calculate the matrix of the cofactors.
 ; - we transpose those cofactors.
 ; - we divide each element by the determinant.
 
-(defn cofactors [m]
-  (let [h (height m)
-        w (width m)
-        rw (range w)]
-    (mapv (fn [i]
-            (mapv #(cofactor m i %) rw)) (range h))))
+(defn cofactors-t [m h w]
+  (let [r (make-array Double/TYPE w h)]
+    (dotimes [i h]
+      (dotimes [j w]
+        (set-at r j i (cofactor m i j))))
+    r))
 
 (defn inverse [m]
-  (let [cfs (cofactors m)
-        t-cfs (transpose cfs)
-        d (t/dot (first m) (first cfs))]
+  (let [h (height m)
+        w (width m)
+        cfs (cofactors-t m h w)
+        ^double d (loop [k 0 sum 0.]
+                    (if (= k w)
+                      sum
+                      (recur (inc k) (+ sum (* (get-at cfs k 0) (get-at m 0 k))))))]
     (if (t/close? 0 d)
       nil
-      (mapv #(t/div % d) t-cfs))))
-
-; A matrix is invertible if the determinant is not 0.
-
-(defn invertible? [m]
-  (not (t/close? 0 (det m))))
+      (do
+        (dotimes [i w]
+          (dotimes [j h]
+            (set-at cfs i j (/ (get-at cfs i j) d))))
+        cfs))))

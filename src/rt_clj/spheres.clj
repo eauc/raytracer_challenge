@@ -22,8 +22,9 @@
 
 ; The first intersection distance is always the smallest.
 
-(defn- local-intersect [s {:keys [origin direction]}]
-  (let [s->ra (subvec origin 0 3)
+(defn- local-intersect [s {:keys [^"[D" origin ^"[D" direction]}]
+  (let [s->ra (aclone origin)
+        _ (aset s->ra 3 0.)
         two-a (* (t/dot direction direction) 2.)
         b (* 2. (t/dot direction s->ra))
         c (- (t/dot s->ra s->ra) 1.)
@@ -41,8 +42,10 @@
 
 ; Normal is easy to calculate since the sphere is always centered at the origin.
 
-(defn- local-normal [_ object-p _]
-  (assoc object-p 3 0.))
+(defn- local-normal [_ ^"[D" object-p _]
+  (let [n (aclone object-p)]
+    (aset n 3 0.)
+    n))
 
 ; ## Creation
 
