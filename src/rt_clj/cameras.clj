@@ -50,8 +50,8 @@
 (defn pixel-ray [{:keys [^double half-width ^double half-height ^double pixel-size inverse-t]} ^double px ^double py]
   (let [cam-x (- half-width (* (+ px 0.5) pixel-size))
         cam-y (- half-height (* (+ py 0.5) pixel-size))
-        world-pixel (m/mul inverse-t (t/point cam-x cam-y -1.))
-        world-origin (m/mul inverse-t t/origin)
+        world-pixel (m/mul-t inverse-t (t/point cam-x cam-y -1.))
+        world-origin (m/mul-t inverse-t t/origin)
         direction (t/norm (t/sub world-pixel world-origin))]
     (r/ray world-origin direction)))
 

@@ -17,7 +17,7 @@
              (:t i)))
       (is (= s
              (:object i)))))
-  
+
   (testing "Aggregating intersections"
     (let [s {:object :test}
           i1 (intersection 1. s)
@@ -41,7 +41,7 @@
                  (:eyev p)))
       (is (t/eq? (t/vector 0. 0. -1.)
                  (:normalv p)))))
-  
+
   (testing "An intersection occurs on the outside"
     (let [ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
           shape (s/sphere)
@@ -49,7 +49,7 @@
           p (prepare-hit hit ray [hit])]
       (is (= false
              (:inside? p)))))
-  
+
   (testing "An intersection occurs on the inside"
     (let [ray (r/ray (t/point 0. 0. 0.) (t/vector 0. 0. 1.))
           shape (s/sphere)
@@ -63,31 +63,31 @@
              (:inside? p)))
       (is (t/eq? (t/vector 0. 0. -1.)
                  (:normalv p)))))
-  
+
   (testing "The hit should offset the point"
     (let [ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
           shape (s/sphere (tr/translation 0. 0. 1.))
           h (intersection 5. shape)]
       (is (> (- (/ t/epsilon 2))
              (t/z (:point (prepare-hit h ray [h])))))))
-  
+
   (testing "Precomputing the reflection vector"
     (let [shape (p/plane)
           ray (r/ray (t/point 0. 1. -1.) (t/vector 0. (- (/ (Math/sqrt 2.) 2)) (/ (Math/sqrt 2.) 2)))
           int (intersection (Math/sqrt 2.) shape)]
-      (is (= (t/vector 0. (/ (Math/sqrt 2.) 2) (/ (Math/sqrt 2.) 2))
-             (:reflectv (prepare-hit int ray [int]))))))
+      (is (t/eq? (t/vector 0. (/ (Math/sqrt 2.) 2) (/ (Math/sqrt 2.) 2))
+                 (:reflectv (prepare-hit int ray [int]))))))
 
   (testing "Finding n1 and n2 at various intersections"
     (let [A (s/sphere
-              (tr/scaling 2. 2. 2.)
-              (assoc m/glass :refractive-index 1.5))
+             (tr/scaling 2. 2. 2.)
+             (assoc m/glass :refractive-index 1.5))
           B (s/sphere
-              (tr/translation 0. 0. -0.25)
-              (assoc m/glass :refractive-index 2.))
+             (tr/translation 0. 0. -0.25)
+             (assoc m/glass :refractive-index 2.))
           C (s/sphere
-              (tr/translation 0. 0. 0.25)
-              (assoc m/glass :refractive-index 2.5))
+             (tr/translation 0. 0. 0.25)
+             (assoc m/glass :refractive-index 2.5))
           ray (r/ray (t/point 0. 0. -4.) (t/vector 0. 0. 1.))
           xs [(intersection 2. A)
               (intersection 2.75 B)
@@ -107,15 +107,16 @@
   (testing "The under point is offset below the surface"
     (let [ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
           shape (s/sphere
-                  (tr/translation 0. 0. 1.)
-                  m/glass)
+                 (tr/translation 0. 0. 1.)
+                 m/glass)
           inter (intersection 5. shape)
           xs [inter]
-          hit (prepare-hit inter ray xs)]
-      (< (/ t/epsilon 2.)
-         (t/z (:under-point hit)))
-      (< (t/z (:point hit))
-         (t/z (:under-point hit)))))
+          hit (prepare-hit inter ray xs)
+          _ (println (:under-point hit))]
+      (is (< (/ t/epsilon 2.)
+             (t/z (:under-point hit))))
+      (is (< (t/z (:point hit))
+             (t/z (:under-point hit))))))
 
   (testing "The hit, when all intersections have positive t"
     (let [s {:object :test}
@@ -124,7 +125,7 @@
           xs (intersections i2 i1)]
       (is (= i1
              (hit xs)))))
-  
+
   (testing "The hit, when some intersections have negative t"
     (let [s {:object :test}
           i1 (intersection -1. s)
@@ -132,7 +133,7 @@
           xs (intersections i2 i1)]
       (is (= i2
              (hit xs)))))
-  
+
   (testing "The hit, when all intersections have negative t"
     (let [s {:object :test}
           i1 (intersection -1. s)
@@ -140,7 +141,7 @@
           xs (intersections i2 i1)]
       (is (= nil
              (hit xs)))))
-  
+
   (testing "The hit is always the lowest non-negative intersection"
     (let [s {:object :test}
           i1 (intersection 5. s)
@@ -159,7 +160,7 @@
               (intersection sqrt2_on2 shape)]
           hit (prepare-hit (nth xs 1) ray xs)]
       (is (= 1. (schlick hit)))))
-  
+
   (testing "The Schlick approximation with a perpendicular viewing angle"
     (let [shape (s/sphere (ma/id 4) m/glass)
           ray (r/ray (t/point 0. 0. 0.) (t/vector 0. 1. 0.))
@@ -168,7 +169,7 @@
           hit (prepare-hit (nth xs 1) ray xs)]
       (is (t/close? 0.04
                     (schlick hit)))))
-  
+
   (testing "The Schlick approximation with small angle and n2 > n1"
     (let [shape (s/sphere (ma/id 4) m/glass)
           ray (r/ray (t/point 0. 0.99 -2.) (t/vector 0. 0. 1.))

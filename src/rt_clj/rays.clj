@@ -17,8 +17,12 @@
 
 ; We can get the point at any distance from a ray's origin.
 
-(defn pos [{:keys [origin direction]} ^double t]
-  (mapv (fn [^double o ^double d] (+ o (* t d))) origin direction))
+(defn pos ^"[D" [{:keys [^"[D" origin ^"[D" direction]} ^double t]
+  (let [r (aclone origin)]
+    (dotimes [k (alength r)]
+      (aset r k (+ (aget origin k)
+                   (* t (aget direction k)))))
+    r))
 
 ; ## Transformations
 
@@ -27,5 +31,5 @@
 ; Scaling a ray scales both the origin and direction.
 
 (defn transform [{:keys [origin direction]} t]
-  {:origin (m/mul t origin)
-   :direction (m/mul t direction)})
+  {:origin (m/mul-t t origin)
+   :direction (m/mul-t t direction)})

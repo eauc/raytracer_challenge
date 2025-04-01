@@ -31,4 +31,9 @@
 
 (def mul t/mul)
 
-(def dot (partial map *))
+(defn dot [^"[D" v ^"[D" w]
+  (let [r (aclone v)]
+    (dotimes [i 3]
+      (aset r i (* (aget v i) (aget w i))))
+    r))
+

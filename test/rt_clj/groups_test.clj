@@ -1,6 +1,7 @@
 (ns rt-clj.groups-test
   (:require [clojure.test :refer :all]
             [rt-clj.groups :refer :all]
+            [rt-clj.matrices :as m]
             [rt-clj.rays :as r]
             [rt-clj.shapes :as sh]
             [rt-clj.spheres :as s]
@@ -13,13 +14,13 @@
     (let [g (with-children
               (group (tr/translation 1. 2. 3.))
               [(s/sphere)])]
-      (is (= (tr/translation 1. 2. 3.)
-             (:transform (:parent (first (:children g))))))))
+      (is (m/eq? (tr/translation 1. 2. 3.)
+                 (:transform (:parent (first (:children g))))))))
 
   (testing "Intersecting a ray with an empty group"
     (is (= []
            (local-intersect (group) (r/ray (t/point 0. 0. 0.) (t/vector 0. 0. 1.))))))
-  
+
   (testing "Intersecting a ray with a nonempty group"
     (let [s1 (s/sphere)
           s2 (s/sphere (tr/translation 0. 0. -3.))
@@ -31,7 +32,7 @@
               (nth (:children g) 0)
               (nth (:children g) 0)]
              (mapv :object (local-intersect g r))))))
-  
+
   (testing "Intersecting a transformed group"
     (let [g (with-children
               (group (tr/scaling 2. 2. 2.))
@@ -48,5 +49,5 @@
           bs ((:local-bounds gr) gr)]
       (is (t/eq? (t/point -1. -1.5 (- (Math/sqrt 2.)))
                  (:min bs)))
-      (is (= (t/point 2. 3. 4.)
-                 (:max bs))))))
+      (is (t/eq? (t/point 2. 3. 4.)
+             (:max bs))))))

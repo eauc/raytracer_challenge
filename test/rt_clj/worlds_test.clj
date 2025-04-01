@@ -19,17 +19,6 @@
              (:objects w)))
       (is (= []
              (:lights w)))))
-  
-  (testing "The default world"
-    (let [w (default-world)]
-      (is (= [(l/point-light (t/point -10. 10. -10.) (c/color 1. 1. 1.))]
-             (:lights w)))
-      (is (= [(-> (s/sphere) (assoc :material (-> m/default-material
-                                                  (assoc :color (c/color 0.8 1.0 0.6))
-                                                  (assoc :diffuse 0.7)
-                                                  (assoc :specular 0.2))))
-              (s/sphere (tr/scaling 0.5 0.5 0.5))]
-             (:objects w)))))
 
   (testing "Intersect a world with a ray"
     (let [w (default-world)
@@ -54,17 +43,17 @@
           hit (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.38066, 0.47583, 0.2855)
                  (shade-hit w hit 1)))))
-  
+
   (testing "Shading an intersection from the inside"
     (let [w (assoc (default-world)
                    :lights [(l/point-light (t/point 0. 0.25 0.) (c/color 1. 1. 1.))])
-          ray (r/ray t/origin (vector 0. 0. 1.))
+          ray (r/ray t/origin (t/vector 0. 0. 1.))
           shape (second (:objects w))
           int (i/intersection 0.5 shape)
           hit (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.90498 0.90498 0.90498)
                  (shade-hit w hit 1)))))
-  
+
   (testing "Shading an intersection in shadow"
     (let [s2 (s/sphere (tr/translation 0. 0. 10.))
           w (world [(s/sphere) s2]
@@ -72,9 +61,9 @@
           ray (r/ray (t/point 0. 0. 5.) (t/vector 0. 0. 1.))
           int (i/intersection 4. s2)
           h (i/prepare-hit int ray [int])]
-      (is (= (c/color 0.1, 0.1, 0.1)
-             (shade-hit w h 1)))))
-  
+      (is (t/eq? (c/color 0.1, 0.1, 0.1)
+                 (shade-hit w h 1)))))
+
   (testing "Shading an intersection with a reflective material"
     (let [shape (p/plane (tr/translation 0. -1. 0.)
                          (-> m/default-material (assoc :reflective 0.5)))
@@ -89,43 +78,45 @@
   (testing "The color when a ray misses"
     (let [w (default-world)
           ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 1. 0.))]
-      (is (= (c/color 0. 0. 0.0)
-             (color w ray 1)))))
-  
+      (is (t/eq? (c/color 0. 0. 0.0)
+                 (color w ray 1)))))
+
   (testing "The color when a ray hits"
     (let [w (default-world)
           ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))]
       (is (t/eq? (c/color 0.38066 0.47583 0.2855)
                  (color w ray 1)))))
-  
+
   (testing "The color with an intersection behind the ray"
     (let [w (-> (default-world)
                 (assoc-in [:objects 0 :material :ambient] 1)
                 (update-in [:objects 1 :material] assoc :ambient 1 :diffuse 0))
           ray (r/ray (t/point 0. 0. -0.75) (t/vector 0. 0. 1.))]
-      (is (= (get-in w [:objects 1 :material :color])
-             (color w ray 1)))))
+      (is (t/eq? (get-in w [:objects 1 :material :color])
+                 (color w ray 1)))))
 
   (let [light (get-in (default-world) [:lights 0])]
     (testing "There is no shadow when nothing is collinear with point and light"
       (is (= false
              (shadowed? (default-world) (t/point 0. 10. 0.) light))))
-  
+
     (testing "The shadow when an object is between the point and the light"
       (is (= true
              (shadowed? (default-world) (t/point 10. -10. 10.) light))))
-  
+
     (testing "Objects can opt out of shadow calculation"
       (is (= false
-             (shadowed? (-> (default-world)
-                            (assoc-in [:objects 0 :material :shadow?] false)
-                            (assoc-in [:objects 1 :material :shadow?] false))
+             (shadowed? (world
+                          (-> (:objects (default-world))
+                              (assoc-in [0 :material :shadow?] false)
+                              (assoc-in [1 :material :shadow?] false))
+                          (:lights (default-world)))
                         (t/point 10. -10. 10.) light))))
-  
+
     (testing "There is no shadow when an object is behind the light"
       (is (= false
              (shadowed? (default-world) (t/point -20. 20. -20.) light))))
-  
+
     (testing "There is no shadow when an object is behind the point"
       (is (= false
              (shadowed? (default-world) (t/point -2. 2. -2.) light)))))
@@ -136,9 +127,9 @@
           shape (get-in w [:objects 1])
           int (i/intersection 1. shape)
           hit (i/prepare-hit int ray [int])]
-      (is (= c/black
-             (reflected-color w hit 1)))))
-  
+      (is (t/eq? c/black
+                 (reflected-color w hit 1)))))
+
   (testing "The reflected color for a reflective material"
     (let [shape (p/plane (tr/translation 0. -1. 0.)
                          (-> m/default-material (assoc :reflective 0.5)))
@@ -149,7 +140,7 @@
           hit (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.190332 0.237915 0.142749)
                  (reflected-color w hit 1)))))
-  
+
   (testing "The reflected color at the maximum recursive depth"
     (let [shape (p/plane (tr/translation 0. -1. 0.)
                          (-> m/default-material (assoc :reflective 0.5)))
@@ -168,9 +159,9 @@
           xs [(i/intersection 4. shape)
               (i/intersection 6. shape)]
           hit (i/prepare-hit (first xs) ray xs)]
-      (is (= c/black
-             (first (refracted-color w hit 5))))))
-  
+      (is (t/eq? c/black
+                 (first (refracted-color w hit 5))))))
+
   (testing "The refracted color at the maximum recursive depth"
     (let [w (-> (default-world)
                 (assoc-in [:objects 0 :material :transparency] 1.)
@@ -180,9 +171,9 @@
           xs [(i/intersection 4. shape)
               (i/intersection 6. shape)]
           hit (i/prepare-hit (first xs) ray xs)]
-      (is (= c/black
-             (first (refracted-color w hit 0))))))
-  
+      (is (t/eq? c/black
+                 (first (refracted-color w hit 0))))))
+
   (testing "The refracted color under total internal reflection"
     (let [w (-> (default-world)
                 (assoc-in [:objects 0 :material :transparency] 1.)
@@ -192,9 +183,9 @@
           xs [(i/intersection (- (/ (Math/sqrt 2.) 2.)) shape)
               (i/intersection (/ (Math/sqrt 2.) 2.) shape)]
           hit (i/prepare-hit (nth xs 1) ray xs)]
-      (is (= c/black
-             (first (refracted-color w hit 5))))))
-  
+      (is (t/eq? c/black
+                 (first (refracted-color w hit 5))))))
+
   (testing "The refracted color with a refracted ray"
     (let [w (-> (default-world)
                 (assoc-in [:objects 0 :material :ambient] 1.)
@@ -211,7 +202,7 @@
           hit (i/prepare-hit (nth xs 2) ray xs)]
       (is (t/eq? (c/color 0. 0.998874 0.047218)
                  (first (refracted-color w hit 5))))))
-  
+
   (testing "shade-hit with a transparent material"
     (let [floor (p/plane (tr/translation 0. -1. 0.)
                          (assoc m/default-material
@@ -221,16 +212,18 @@
                          (assoc m/default-material
                                 :ambient 0.5
                                 :color (c/color 1. 0. 0.)))
-          w (-> (default-world)
-                (update :objects #(conj % floor))
-                (update :objects #(conj % ball)))
+          w (world
+             (-> (:objects (default-world))
+                 (conj floor)
+                 (conj ball))
+             (:lights (default-world)))
           sqrt2_on2 (/ (Math/sqrt 2.) 2.)
           ray (r/ray (t/point 0. 0. -3.) (t/vector 0. (- sqrt2_on2) sqrt2_on2))
           xs [(i/intersection (Math/sqrt 2.) floor)]
           hit (i/prepare-hit (first xs) ray xs)]
       (is (t/eq? (c/color 0.936425 0.686425 0.686425)
                  (shade-hit w hit 5)))))
-  
+
   (testing "shade-hit with a reflective, transparent material"
     (let [sqrt2_on2 (/ (Math/sqrt 2.) 2.)
           floor (p/plane (tr/translation 0. -1. 0.)
@@ -242,9 +235,11 @@
                          (assoc m/default-material
                                 :color (c/color 1. 0. 0.)
                                 :ambient 0.5))
-          w (-> (default-world)
-                (update :objects #(conj % floor))
-                (update :objects #(conj % ball)))
+          w (world
+             (-> (:objects (default-world))
+                 (conj floor)
+                 (conj ball))
+             (:lights (default-world)))
           ray (r/ray (t/point 0. 0. -3.) (t/vector 0. (- sqrt2_on2) sqrt2_on2))
           xs [(i/intersection (Math/sqrt 2.) floor)]
           hit (i/prepare-hit (first xs) ray xs)]

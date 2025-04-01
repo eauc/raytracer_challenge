@@ -16,13 +16,13 @@
   [{:keys [parent inverse-t] :as shape} point]
   (if (nil? shape)
     point
-    (m/mul inverse-t (world->object parent point))))
+    (m/mul-t inverse-t (world->object parent point))))
 
 ; `object->world` takes a normal vector in object space and transform it to world space, taking into consideration any parent objects between the two spaces.
 
 (defn object->world
   [{:keys [trans-inverse-t parent]} v]
-  (let [[x y z] ((juxt t/x t/y t/z) (m/mul trans-inverse-t v))
+  (let [[x y z] ((juxt t/x t/y t/z) (m/mul-t trans-inverse-t v))
         new-v (t/norm (t/vector x y z))]
     (if (nil? parent)
       new-v
@@ -41,7 +41,7 @@
         coords (juxt t/x t/y t/z)
         [x-min y-min z-min] (coords min)
         [x-max y-max z-max] (coords max)
-        corners (map #(m/mul transform %)
+        corners (map #(m/mul-t transform %)
                      [(t/point x-min y-min z-min)
                       (t/point x-min y-min z-max)
                       (t/point x-min y-max z-min)

@@ -15,6 +15,6 @@
 (defn pattern-at-shape [{p-inverse-t :inverse-t :as pattern}
                         {s-inverse-t :inverse-t} ;; shape
                         w-point]
-  (let [o-point (mat/mul s-inverse-t w-point)
-        p-point (mat/mul p-inverse-t o-point)]
+  (let [o-point (mat/mul-t s-inverse-t w-point)
+        p-point (mat/mul-t p-inverse-t o-point)]
     (pattern-at pattern p-point)))

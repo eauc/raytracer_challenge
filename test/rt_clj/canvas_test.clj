@@ -1,7 +1,8 @@
 (ns rt-clj.canvas-test
   (:require [clojure.test :refer :all]
             [rt-clj.canvas :refer :all]
-            [rt-clj.colors :as c]))
+            [rt-clj.colors :as c]
+            [rt-clj.tuples :as t]))
 
 (deftest canvas-test
   (testing "Canvas creation"
@@ -12,10 +13,10 @@
              (height c)))))
 
   (testing "Writing pixels to canvas"
-    (is (= (c/color 0.1 0.2 0.3)
-           (-> (canvas 10 20)
-               (assoc-at 5 13 (c/color 0.1 0.2 0.3))
-               (get-at 5 13)))))
+    (is (t/eq? (c/color 0.1 0.2 0.3)
+               (-> (canvas 10 20)
+                   (assoc-at 5 13 (c/color 0.1 0.2 0.3))
+                   (get-at 5 13)))))
 
   (testing "Constructing the PPM header"
     (is (= ["P3"

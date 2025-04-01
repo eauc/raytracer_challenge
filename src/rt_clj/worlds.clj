@@ -20,6 +20,7 @@
 (defn world
   ([os ls]
    {:objects os
+    :objects-with-shadow (filter #(get-in % [:material :shadow?] true) os)
     :lights ls})
   ([]
    (world [] [])))
@@ -45,9 +46,12 @@
 (defn hit-cmp [{^double ta :t} {^double tb :t}]
   (< ta tb))
 
-(defn intersect [w ray]
-  (vec
-    (into (sorted-set-by hit-cmp) (mapcat #(sh/intersect % ray)) (:objects w))))
+(defn intersect 
+  ([w ray obj-k]
+   (vec
+     (into (sorted-set-by hit-cmp) (mapcat #(sh/intersect % ray)) (obj-k w))))
+  ([w ray]
+   (intersect w ray :objects)))
 
 ; ## Shadows
 
@@ -59,8 +63,7 @@
   (let [p->l (t/sub (:position l) p)
         d (t/mag p->l)
         ray (r/ray p (t/norm p->l))
-        hits (filter #(get-in % [:object :material :shadow?] true)
-                     (intersect w ray))
+        hits (intersect w ray :objects-with-shadow)
         {:keys [^double t]} (i/hit hits)]
     (boolean (and t (> d t)))))
 

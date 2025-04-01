@@ -29,34 +29,34 @@
              (get-at m 3 2)))))
 
   (testing "A 2x2 matrix ought to be representable"
-    (let [m (matrix [[-3 5]
-                     [1 -2]])]
+    (let [m (matrix [[-3. 5.]
+                     [1. -2.]])]
       (is (= 2
              (height m)))
       (is (= 2
              (width m)))
-      (is (= -3
+      (is (= -3.
              (get-at m 0 0)))
-      (is (= 5
+      (is (= 5.
              (get-at m 0 1)))
-      (is (= 1
+      (is (= 1.
              (get-at m 1 0)))
-      (is (= -2
+      (is (= -2.
              (get-at m 1 1)))))
 
   (testing "A 3x3 matrix ought to be representable"
-    (let [m (matrix [[-3 5 0]
-                     [1 -2 -7]
-                     [0 1 1]])]
+    (let [m (matrix [[-3. 5. 0.]
+                     [1. -2. -7.]
+                     [0. 1. 1.]])]
       (is (= 3
              (height m)))
       (is (= 3
              (width m)))
-      (is (= -3
+      (is (= -3.
              (get-at m 0 0)))
-      (is (= -2
+      (is (= -2.
              (get-at m 1 1)))
-      (is (= 1
+      (is (= 1.
              (get-at m 2 2)))))
 
   (testing "Matrix equality with identical matrices"
@@ -80,70 +80,70 @@
                            [4 5 6 7]])))))
 
   (testing "Transposing a matrix"
-    (is (= (matrix [[0 9 3 0]
-                    [9 8 0 8]
-                    [1 8 5 3]
-                    [0 0 5 8]])
-           (transpose (matrix [[0 9 1 0]
-                               [9 8 8 0]
-                               [3 0 5 5]
-                               [0 8 3 8]])))))
+    (is (eq? (matrix [[0 9 3 0]
+                      [9 8 0 8]
+                      [1 8 5 3]
+                      [0 0 5 8]])
+             (transpose (matrix [[0 9 1 0]
+                                 [9 8 8 0]
+                                 [3 0 5 5]
+                                 [0 8 3 8]])))))
 
   (testing "Multiplying two matrices"
-    (is (= (matrix [[24. 49. 98.  196.]
-                    [31. 64. 128. 256.]
-                    [38. 79. 158. 316.]
-                    [45. 94. 188. 376.]])
-           (mul (matrix [[1 2 3 4]
-                         [2 3 4 5]
-                         [3 4 5 6]
-                         [4 5 6 7]])
-                (matrix [[0 1 2 4]
-                         [1 2 4 8]
-                         [2 4 8 16]
-                         [4 8 16 32]])))))
+    (is (eq? (matrix [[24. 49. 98.  196.]
+                      [31. 64. 128. 256.]
+                      [38. 79. 158. 316.]
+                      [45. 94. 188. 376.]])
+             (mul (matrix [[1. 2. 3. 4.]
+                           [2. 3. 4. 5.]
+                           [3. 4. 5. 6.]
+                           [4. 5. 6. 7.]])
+                  (matrix [[0. 1. 2. 4.]
+                           [1. 2. 4. 8.]
+                           [2. 4. 8. 16.]
+                           [4. 8. 16. 32.]])))))
 
   (testing "A matrix multiplied by a tuple"
-    (is (= (t/tuple 18. 24. 33. 1.)
-           (mul (matrix [[1 2 3 4]
-                         [2 4 4 2]
-                         [8 6 4 1]
-                         [0 0 0 1]])
-                (t/tuple 1 2 3 1)))))
+    (is (t/eq? (t/tuple 18. 24. 33. 1.)
+               (mul-t (matrix [[1. 2. 3. 4.]
+                               [2. 4. 4. 2.]
+                               [8. 6. 4. 1.]
+                               [0. 0. 0. 1.]])
+                      (t/tuple 1. 2. 3. 1.)))))
 
   (testing "Multiplying a matrix by the identity"
     (let [m (matrix [[0. 1. 2. 4.]
                      [1. 2. 4. 8.]
                      [2. 4. 8. 16.]
                      [4. 8. 16. 32.]])]
-      (is (= m
-             (mul m (id 4))))))
+      (is (eq? m
+               (mul m (id 4))))))
 
   (testing "Multiplying identity by a tuple"
     (let [a (t/tuple 1. 2. 3. 4.)]
-      (is (= a
-             (mul (id 4) a)))))
+      (is (t/eq? a
+                 (mul-t (id 4) a)))))
 
   (testing "A submatrix of a 3x3 matrix is a 2x2 matrix"
-    (is (= (matrix [[-3 2]
-                    [0 6]])
-           (subm (matrix [[1 5 0]
-                          [-3 2 7]
-                          [0 6 -3]]) 0 2))))
+    (is (eq? (matrix [[-3. 2.]
+                      [0. 6.]])
+             (subm (matrix [[1. 5. 0.]
+                            [-3. 2. 7.]
+                            [0. 6. -3.]]) 0 2))))
 
   (testing "A submatrix of a 4x4 matrix is a 3x3 matrix"
-    (is (= (matrix [[-6 1 6]
-                    [-8 8 6]
-                    [-7 -1 1]])
-           (subm (matrix [[-6 1 1 6]
-                          [-8 5 8 6]
-                          [-1 0 8 2]
-                          [-7 1 -1 1]]) 2 1))))
+    (is (eq? (matrix [[-6. 1. 6.]
+                      [-8. 8. 6.]
+                      [-7. -1. 1.]])
+             (subm (matrix [[-6. 1. 1. 6.]
+                            [-8. 5. 8. 6.]
+                            [-1. 0. 8. 2.]
+                            [-7. 1. -1. 1.]]) 2 1))))
 
   (testing "Calculating a minor of a 3x3 matrix"
-    (let [m (matrix [[3 5 0]
-                     [2 -1 -7]
-                     [6 -1 5]])]
+    (let [m (matrix [[3. 5. 0.]
+                     [2. -1. -7.]
+                     [6. -1. 5.]])]
       (is (= 25.
              (det (subm m 1 0))
              (minor m 1 0)))))
@@ -159,8 +159,8 @@
 
   (testing "Calculating the determinant of a 2x2 matrix"
     (is (= 17.
-           (det (matrix [[1 5]
-                         [-3 2]])))))
+           (det (matrix [[1. 5.]
+                         [-3. 2.]])))))
 
   (testing "Calculating the determinant of a 3x3 matrix"
     (let [m (matrix [[1. 2. 6.]
@@ -176,10 +176,10 @@
              (det m)))))
 
   (testing "Calculating the determinant of a 4x4 matrix"
-    (let [m (matrix [[-2 -8 3 5]
-                     [-3 1 7 3]
-                     [1 2 -9 6]
-                     [-6 7 7 -9]])]
+    (let [m (matrix [[-2. -8. 3. 5.]
+                     [-3. 1. 7. 3.]
+                     [1. 2. -9. 6.]
+                     [-6. 7. 7. -9.]])]
       (is (= 690.
              (cofactor m 0 0)))
       (is (= 447.
@@ -243,7 +243,7 @@
       (is (eq? a
                (mul (mul a b) (inverse b))))))
 
-  (testing "Multiplying a matrix by its gives the identity"
+  (testing "Multiplying a matrix by its inverse gives the identity"
     (let [a (matrix [[3. -9. 7. 3.]
                      [3. -8. 2. -9.]
                      [-4. 4. 4. 1.]
@@ -252,5 +252,5 @@
                (mul a (inverse a))))))
 
   (testing "The inverse of identity is identity"
-    (is (= (id 4)
-           (inverse (id 4))))))
+    (is (eq? (id 4)
+             (inverse (id 4))))))
