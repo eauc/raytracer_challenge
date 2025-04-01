@@ -1,5 +1,5 @@
 #kaocha/v1
 {:randomize? false
  :reporter [kaocha.report/documentation]
- :plugins [:hooks]
+ :plugins [:cloverage :hooks]
  :kaocha.hooks/post-load [user/test-post-load-hook]}
