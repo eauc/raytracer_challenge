@@ -3,10 +3,14 @@
         expound/expound {:mvn/version "0.7.2"}}
 
  :aliases {:dev {:extra-paths ["dev" "examples" "test"]
-                 :jvm-opts ["-Xss8m"]
+                 :jvm-opts ["-Xss8m"                          ;; increase stack size
+                            "-Djdk.attach.allowAttachSelf"    ;; used by profiler
+                            "-XX:+EnableDynamicAgentLoading"] ;; used by profiler
                  :extra-deps {orchestra/orchestra {:mvn/version "2019.02.06-1"}
                               org.clojure/tools.namespace {:mvn/version "0.2.11"}
-                              io.github.nextjournal/clerk {:mvn/version "0.17.1102"}}}
+                              io.github.nextjournal/clerk {:mvn/version "0.17.1102"}
+                              criterium/criterium {:mvn/version "0.4.6"}
+                              com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.4.0"}}}
 
            :build-doc {:exec-fn nextjournal.clerk/build!
                        :exec-args {:paths ["examples/rt_clj/**" "src/**"]}}

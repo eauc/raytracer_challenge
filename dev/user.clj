@@ -1,9 +1,9 @@
 (ns user
   (:require [clojure.tools.namespace.repl :refer [refresh]]
             [clojure.spec.alpha :as s]
+            [clj-async-profiler.core :as prof]
             [expound.alpha :as expound]
-            [orchestra.spec.test :as st]
-            [nextjournal.clerk :as clerk]))
+            [orchestra.spec.test :as st]))
 
 (defn reset
   []
@@ -15,6 +15,11 @@
   (alter-var-root #'s/*explain-out* (constantly expound/printer))
   (st/instrument))
 
-(defn test-post-load-hook [test-plan]
+(defn test-post-load-hook 
+  [test-plan]
   (init)
   test-plan)
+
+(defn serve-profiler
+  []
+  (prof/serve-ui 8080))
