@@ -44,12 +44,16 @@
 ; We return the intersections in sorted order since this will help with some future algo.
 
 (defn intersect
-  ([w ray obj-k]
-   (vec
-    (sort-by :t
-             (mapcat #(sh/intersect % ray) (obj-k w)))))
+  ([w ray shadow?]
+   (let [objs (if shadow? (:objects-with-shadow w) (:objects w))
+         is (into
+             []
+             (comp (mapcat #(sh/intersect % ray))
+                   (filter #(or (not shadow?) (< 0 ^double (:t %)))))
+             objs)]
+     (vec (sort-by :t is))))
   ([w ray]
-   (intersect w ray :objects)))
+   (intersect w ray nil)))
 
 ; ## Shadows
 
@@ -61,7 +65,7 @@
   (let [p->l (t/sub (:position l) p)
         d (t/mag p->l)
         ray (r/ray p (t/norm p->l))
-        hits (intersect w ray :objects-with-shadow)
+        hits (intersect w ray :shadow)
         {:keys [^double t]} (i/hit hits)]
     (boolean (and t (> d t)))))
 
