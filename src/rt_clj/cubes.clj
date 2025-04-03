@@ -27,28 +27,32 @@
 ; - If the largest minimum t value is greater than the smallest maximum t value, the ray misses the cube.
 
 (defn check-axis
-  [origin direction [min max]]
+  [^double origin ^double direction ^double min ^double max]
   (let [t-min-numerator (- min origin)
         t-max-numerator (- max origin)
-        parallel? (< (Math/abs direction) t/epsilon)
+        parallel? (< (Math/abs direction) (double t/epsilon))
         t-min (if parallel?
-                (* t-min-numerator t/infinity)
+                (* t-min-numerator (double t/infinity))
                 (/ t-min-numerator direction))
         t-max (if parallel?
-                (* t-max-numerator t/infinity)
+                (* t-max-numerator (double t/infinity))
                 (/ t-max-numerator direction))]
     (if (> t-min t-max)
       [t-max t-min]
       [t-min t-max])))
 
+(def project
+  (juxt t/x t/y t/z))
+
 (defn local-intersect
   [{:keys [local-bounds] :as cube}
    {:keys [origin direction]}] ;; ray
   (let [{:keys [min max]} (local-bounds cube)
-        [[x-min y-min z-min] [x-max y-max z-max]] (map (juxt t/x t/y t/z) [min max])
-        [x-t-min x-t-max] (check-axis (t/x origin) (t/x direction) [x-min x-max])
-        [y-t-min y-t-max] (check-axis (t/y origin) (t/y direction) [y-min y-max])
-        [z-t-min z-t-max] (check-axis (t/z origin) (t/z direction) [z-min z-max])
+        [x-min y-min z-min] (project min)
+        [x-max y-max z-max] (project max)
+        [^double x-t-min ^double x-t-max] (check-axis (t/x origin) (t/x direction) x-min x-max)
+        [^double y-t-min ^double y-t-max] (check-axis (t/y origin) (t/y direction) y-min y-max)
+        [^double z-t-min ^double z-t-max] (check-axis (t/z origin) (t/z direction) z-min z-max)
         t-min (clojure.core/max x-t-min y-t-min z-t-min)
         t-max (clojure.core/min x-t-max y-t-max z-t-max)]
     (if (> t-min t-max)

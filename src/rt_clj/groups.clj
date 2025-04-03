@@ -11,8 +11,9 @@
 ; ## Bounds
 
 (def local-bounds
-  (constantly {:min (t/point (- t/epsilon) (- t/epsilon) (- t/epsilon))
-               :max (t/point t/epsilon t/epsilon t/epsilon)}))
+  (let [e (double t/epsilon)]
+    (constantly {:min (t/point (- e) (- e) (- e))
+                 :max (t/point e e e)})))
 
 (defn children-bounds
   [cs]

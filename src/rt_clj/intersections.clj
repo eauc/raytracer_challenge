@@ -46,7 +46,7 @@
          containers []]
     (let [is-hit? (= current hit)
           object (:object current)
-          next-containers (if (first (filter #(= % object) containers))
+          next-containers (if (some #{object} containers)
                             (filterv #(not= % object) containers)
                             (conj containers object))]
       (if is-hit?

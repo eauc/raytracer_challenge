@@ -10,7 +10,7 @@
 ; ## Bounds
 
 (def local-bounds
-  (constantly {:min (t/point (- t/infinity) (- t/epsilon) (- t/infinity))
+  (constantly {:min (t/point (- (double t/infinity)) (- (double t/epsilon)) (- (double t/infinity)))
                :max (t/point t/infinity t/epsilon t/infinity)}))
 
 ; ## Intersections

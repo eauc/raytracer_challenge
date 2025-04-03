@@ -18,7 +18,7 @@
    :max (t/point 1. maximum 1.)})
 
 (defn check-cap
-  [{:keys [origin direction]} t]
+  [{:keys [origin direction]} ^double t]
   (let [x (+ (t/x origin) (* t (t/x direction)))
         z (+ (t/z origin) (* t (t/z direction)))]
     (>= 1. (+ (Math/pow x 2.)
@@ -31,7 +31,7 @@
 ; `intersect-caps` checks to see if the given ray intersects the end caps of the given cylinder, and adds the points of intersection (if any) to the hits collection.
 
 (defn intersect-caps
-  [{:keys [closed? minimum maximum] :as cyl}
+  [{:keys [closed? ^double minimum ^double maximum] :as cyl}
    {:keys [origin direction] :as ray}
    ints]
   (if (or (not closed?)
@@ -45,8 +45,11 @@
        []
        (concat
         ints
-        (filter identity [(when cap-min? (i/intersection t-min cyl))
-                          (when cap-max? (i/intersection t-max cyl))]))))))
+        (cond
+          (and cap-min? cap-max?) [(i/intersection t-min cyl) (i/intersection t-max cyl)]
+          cap-min? [(i/intersection t-min cyl)]
+          cap-max? [(i/intersection t-max cyl)]
+          :else []))))))
 
 ; We first calculate a pseudo-discrimant, which is negative is the ray doesn't intersect the cylinder.
 
@@ -76,11 +79,14 @@
                  t0 (/ (- 0. b disc-sqrt) a)
                  t1 (/ (+ (- 0. b) disc-sqrt) a)
                  y0 (+ (t/y origin) (* t0 (t/y direction)))
-                 y1 (+ (t/y origin) (* t1 (t/y direction)))]
-             (filterv
-              identity
-              [(when (< minimum y0 maximum) (i/intersection t0 cyl))
-               (when (< minimum y1 maximum) (i/intersection t1 cyl))]))))))))
+                 y1 (+ (t/y origin) (* t1 (t/y direction)))
+                 y0-in-bound (< minimum y0 maximum)
+                 y1-in-bound (< minimum y1 maximum)]
+             (cond
+               (and y0-in-bound y1-in-bound) [(i/intersection t0 cyl) (i/intersection t1 cyl)]
+               y0-in-bound [(i/intersection t0 cyl)]
+               y1-in-bound [(i/intersection t1 cyl)]
+               :else []))))))))
 
 ; ## Normal
 
@@ -89,12 +95,13 @@
 ; When the point is on one of the cylinder's cap, just return =+/-u[y]=.
 
 (defn local-normal
-  [{:keys [minimum maximum]} point _]
+  [{:keys [^double minimum ^double maximum]} point _]
   (let [d (+ (Math/pow (t/x point) 2.)
-             (Math/pow (t/z point) 2.))]
+             (Math/pow (t/z point) 2.))
+        e (double t/epsilon)]
     (cond
-      (and (< d 1) (>= (t/y point) (- maximum t/epsilon))) (t/vector 0. 1. 0.)
-      (and (< d 1) (<= (t/y point) (+ minimum t/epsilon))) (t/vector 0. -1. 0.)
+      (and (< d 1) (>= (t/y point) (- maximum e))) (t/vector 0. 1. 0.)
+      (and (< d 1) (<= (t/y point) (+ minimum e))) (t/vector 0. -1. 0.)
       :else (t/vector (t/x point) 0. (t/z point)))))
 
 ; ## Creation
@@ -104,7 +111,7 @@
    (-> (sh/shape local-bounds local-intersect local-normal transform material)
        (assoc
         :closed? false
-        :minimum (- t/infinity)
+        :minimum (- (double t/infinity))
         :maximum t/infinity)))
   ([transform]
    (cylinder transform mr/default-material))

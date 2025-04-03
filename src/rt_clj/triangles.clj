@@ -11,9 +11,14 @@
 
 ; ## Bounds
 
+(def project
+  (juxt t/x t/y t/z))
+
 (defn local-bounds
   [{:keys [p1 p2 p3]}]
-  (let [[[x1 y1 z1] [x2 y2 z2] [x3 y3 z3]] (map (juxt t/x t/y t/z) [p1 p2 p3])]
+  (let [[^double x1 ^double y1 ^double z1] (project p1)
+        [^double x2 ^double y2 ^double z2] (project p2)
+        [^double x3 ^double y3 ^double z3] (project p3)]
     {:min (t/point (min x1 x2 x3) (min y1 y2 y3) (min z1 z2 z3))
      :max (t/point (max x1 x2 x3) (max y1 y2 y3) (max z1 z2 z3))}))
 
@@ -83,8 +88,8 @@
 ; When computing the normal vector on a smooth triangle, use the intersection’s u and v properties to interpolate the normal.
 
 (defn smooth-local-normal
-  [{:keys [n1 n2 n3]} _ {:keys [u v]}]
-  (t/add (t/add (t/mul n1 (- 1 u v))
+  [{:keys [n1 n2 n3]} _ {:keys [^double u ^double v]}]
+  (t/add (t/add (t/mul n1 (- 1. u v))
                 (t/mul n2 u))
          (t/mul n3 v)))
 

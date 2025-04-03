@@ -53,10 +53,10 @@
 ; We need to define close equality for 2 floating-point scalars.
 
 (def epsilon
-  (double 10e-6))
+  10e-6)
 
 (def infinity
-  (double 10e300))
+  10e300)
 
 (defn close? [^double a ^double b]
   (> (double epsilon) (Math/abs (- a b))))

@@ -6,7 +6,8 @@
   (:import java.lang.Math)
   (:require [rt-clj.colors :as col]
             [rt-clj.matrices :as mat]
-            [rt-clj.pattern-protocol :as pt]))
+            [rt-clj.pattern-protocol :as pt]
+            [rt-clj.tuples :as t]))
 
 ; ## Test Pattern
 
@@ -16,14 +17,14 @@
 
 (defrecord TestPattern [transform inverse-t]
   pt/Pattern
-  (pattern-at [_ [x y z]]
-    (col/color x y z)))
+  (pattern-at [_ p]
+    (col/color (t/x p) (t/y p) (t/z p))))
 
 (defn test-pattern
   ([transform]
    (map->TestPattern
-     {:transform transform
-      :inverse-t (mat/inverse transform)}))
+    {:transform transform
+     :inverse-t (mat/inverse transform)}))
   ([]
    (test-pattern (mat/id 4))))
 
@@ -36,17 +37,18 @@
 
 (defrecord Stripes [a b transform inverse-t]
   pt/Pattern
-  (pattern-at [{:keys [a b]} [x]]
-    (if (<= 0 x)
-      (if (= 1 (mod (int x) 2)) b a)
-      (if (= 0 (mod (- (int x)) 2)) b a))))
+  (pattern-at [{:keys [a b]} p]
+    (let [x (t/x p)]
+      (if (<= 0. x)
+        (if (= 1 (mod (int x) 2)) b a)
+        (if (= 0 (mod (- (int x)) 2)) b a)))))
 
 (defn stripes
   ([a b transform]
    (map->Stripes
-     {:a a :b b
-      :transform transform
-      :inverse-t (mat/inverse transform)}))
+    {:a a :b b
+     :transform transform
+     :inverse-t (mat/inverse transform)}))
   ([a b]
    (stripes a b (mat/id 4))))
 
@@ -58,15 +60,21 @@
 
 (defrecord Gradient [a b-a transform inverse-t]
   pt/Pattern
-  (pattern-at [{:keys [a b-a]} [x]]
-    (col/add a (col/mul b-a (- x (Math/floor x))))))
+  (pattern-at [{:keys [^"[D" a ^"[D" b-a]} p]
+    (let [sz (alength a)
+          ^"[D" r (make-array Double/TYPE sz)
+          x (t/x p)
+          x' (- x (Math/floor x))]
+      (dotimes [k sz]
+        (aset r k (+ (aget a k) (* (aget b-a k) x'))))
+      r)))
 
 (defn gradient
   ([a b transform]
    (map->Gradient
-     {:a a :b-a (col/sub b a)
-      :transform transform
-      :inverse-t (mat/inverse transform)}))
+    {:a a :b-a (col/sub b a)
+     :transform transform
+     :inverse-t (mat/inverse transform)}))
   ([a b]
    (gradient a b (mat/id 4))))
 
@@ -79,17 +87,19 @@
 
 (defrecord Rings [a b transform inverse-t]
   pt/Pattern
-  (pattern-at [{:keys [a b]} [x _ z]]
-    (let [r (Math/floor (Math/sqrt (+ (* x x) (* z z))))]
+  (pattern-at [{:keys [a b]} p]
+    (let [x (t/x p)
+          z (t/z p)
+          r (Math/floor (Math/sqrt (+ (* x x) (* z z))))]
       (if (= 0.0 (mod r 2))
         a b))))
 
 (defn rings
   ([a b transform]
    (map->Rings
-     {:a a :b b
-      :transform transform
-      :inverse-t (mat/inverse transform)}))
+    {:a a :b b
+     :transform transform
+     :inverse-t (mat/inverse transform)}))
   ([a b]
    (rings a b (mat/id 4))))
 
@@ -101,18 +111,18 @@
 
 (defrecord Checker [a b transform inverse-t]
   pt/Pattern
-  (pattern-at [{:keys [a b]} [x y z]]
-    (let [d (+ (Math/floor x)
-               (Math/floor y)
-               (Math/floor z))]
+  (pattern-at [{:keys [a b]} p]
+    (let [d (+ (Math/floor (t/x p))
+               (Math/floor (t/y p))
+               (Math/floor (t/z p)))]
       (if (= 0. (mod d 2))
         a b))))
 
 (defn checker
   ([a b transform]
    (map->Checker
-     {:a a :b b
-      :transform transform
-      :inverse-t (mat/inverse transform)}))
+    {:a a :b b
+     :transform transform
+     :inverse-t (mat/inverse transform)}))
   ([a b]
    (checker a b (mat/id 4))))

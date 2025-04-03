@@ -13,7 +13,7 @@
 ; ## Bounds
 
 (defn local-bounds
-  [{:keys [minimum maximum]}]
+  [{:keys [^double minimum ^double maximum]}]
   (let [max-abs (max (Math/abs minimum)
                      (Math/abs maximum))]
     {:min (t/point (- max-abs) minimum (- max-abs))
@@ -24,14 +24,14 @@
 ; The same as cylinders, except the radius of the cone is the absolute value of `y`.
 
 (defn check-cap
-  [{:keys [origin direction]} t y]
+  [{:keys [origin direction]} ^double t ^double y]
   (let [x (+ (t/x origin) (* t (t/x direction)))
         z (+ (t/z origin) (* t (t/z direction)))]
     (>= (Math/abs y) (+ (Math/pow x 2.)
                         (Math/pow z 2.)))))
 
 (defn intersect-caps
-  [{:keys [closed? minimum maximum] :as c}
+  [{:keys [closed? ^double minimum ^double maximum] :as c}
    {:keys [origin direction] :as ray}
    ints]
   (if (or (not closed?)
@@ -45,8 +45,11 @@
        []
        (concat
         ints
-        (filter identity [(when cap-min? (i/intersection t-min c))
-                          (when cap-max? (i/intersection t-max c))]))))))
+        (cond
+          (and cap-min? cap-max?) [(i/intersection t-min c) (i/intersection t-max c)]
+          cap-min? [(i/intersection t-min c)]
+          cap-max? [(i/intersection t-max c)]
+          :else []))))))
 
 ; The same as cylinders, except the formula for `a,b,c`.
 
@@ -80,23 +83,26 @@
                    t0 (/ (- 0. b disc-sqrt) (* 2. a))
                    t1 (/ (+ (- 0. b) disc-sqrt) (* 2. a))
                    y0 (+ (t/y origin) (* t0 (t/y direction)))
-                   y1 (+ (t/y origin) (* t1 (t/y direction)))]
-               (filterv
-                identity
-                [(when (< minimum y0 maximum) (i/intersection t0 cne))
-                 (when (< minimum y1 maximum) (i/intersection t1 cne))])))))))))
+                   y1 (+ (t/y origin) (* t1 (t/y direction)))
+                   y0-in-bounds (< minimum y0 maximum)
+                   y1-in-bounds (< minimum y1 maximum)]
+               (cond
+                 (and y0-in-bounds y1-in-bounds) [(i/intersection t0 cne) (i/intersection t1 cne)]
+                 y0-in-bounds [(i/intersection t0 cne)]
+                 y1-in-bounds [(i/intersection t1 cne)]
+                 :else [])))))))))
 
 ; ## Normal
 
 ; The same as cylinders, except the normal as an `y` component.
 
 (defn local-normal
-  [{:keys [minimum maximum]} point _]
+  [{:keys [^double minimum ^double maximum]} point _]
   (let [d (+ (Math/pow (t/x point) 2.)
              (Math/pow (t/z point) 2.))]
     (cond
-      (and (< d 1) (>= (t/y point) (- maximum t/epsilon))) (t/vector 0. 1. 0.)
-      (and (< d 1) (<= (t/y point) (+ minimum t/epsilon))) (t/vector 0. -1. 0.)
+      (and (< d 1) (>= (t/y point) (- maximum (double t/epsilon)))) (t/vector 0. 1. 0.)
+      (and (< d 1) (<= (t/y point) (+ minimum (double t/epsilon)))) (t/vector 0. -1. 0.)
       :else (let [y (Math/sqrt (+ (Math/pow (t/x point) 2.)
                                   (Math/pow (t/z point) 2.)))]
               (t/vector (t/x point)
@@ -110,7 +116,7 @@
    (-> (sh/shape local-bounds local-intersect local-normal transform material)
        (assoc
         :closed? false
-        :minimum (- t/infinity)
+        :minimum (- (double t/infinity))
         :maximum t/infinity)))
   ([transform]
    (cone transform mr/default-material))
