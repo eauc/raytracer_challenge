@@ -80,20 +80,19 @@
         inside? (< (t/dot normalv' eyev) 0)
         ^"[D" normalv (if inside? (t/neg normalv') normalv')
         n (refractive-indices hit ints)]
-    (assoc hit
-           :point (let [p (aclone point)]
+    {:point (let [p (aclone point)]
+              (dotimes [k (alength p)]
+                (aset p k (+ (aget point k) (* (double t/epsilon) (aget normalv k)))))
+              p)
+     :under-point (let [p (aclone point)]
                     (dotimes [k (alength p)]
-                      (aset p k (+ (aget point k) (* (double t/epsilon) (aget normalv k)))))
+                      (aset p k (- (aget point k) (* (double t/epsilon) (aget normalv k)))))
                     p)
-           :under-point (let [p (aclone point)]
-                          (dotimes [k (alength p)]
-                            (aset p k (- (aget point k) (* (double t/epsilon) (aget normalv k)))))
-                          p)
-           :eyev eyev
-           :n n
-           :normalv normalv
-           :inside? inside?
-           :reflectv (t/reflect (:direction ray) normalv))))
+     :eyev eyev
+     :n n
+     :normalv normalv
+     :inside? inside?
+     :reflectv (t/reflect (:direction ray) normalv)}))
 
 ; ## Reflectance
 ;

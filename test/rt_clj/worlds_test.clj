@@ -40,9 +40,9 @@
           ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
           shape (first (:objects w))
           int (i/intersection 4. shape)
-          hit (i/prepare-hit int ray [int])]
+          comps (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.38066, 0.47583, 0.2855)
-                 (shade-hit w hit 1)))))
+                 (shade-hit w int comps 1)))))
 
   (testing "Shading an intersection from the inside"
     (let [w (assoc (default-world)
@@ -50,9 +50,9 @@
           ray (r/ray t/origin (t/vector 0. 0. 1.))
           shape (second (:objects w))
           int (i/intersection 0.5 shape)
-          hit (i/prepare-hit int ray [int])]
+          comps (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.90498 0.90498 0.90498)
-                 (shade-hit w hit 1)))))
+                 (shade-hit w int comps 1)))))
 
   (testing "Shading an intersection in shadow"
     (let [s2 (s/sphere (tr/translation 0. 0. 10.))
@@ -60,9 +60,9 @@
                    [(l/point-light (t/point 0. 0. -10.) (c/color 1. 1. 1.))])
           ray (r/ray (t/point 0. 0. 5.) (t/vector 0. 0. 1.))
           int (i/intersection 4. s2)
-          h (i/prepare-hit int ray [int])]
+          comps (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.1, 0.1, 0.1)
-                 (shade-hit w h 1)))))
+                 (shade-hit w int comps 1)))))
 
   (testing "Shading an intersection with a reflective material"
     (let [shape (p/plane (tr/translation 0. -1. 0.)
@@ -71,9 +71,9 @@
           a (/ (Math/sqrt 2) 2)
           ray (r/ray (t/point 0. 0. -3.) (t/vector 0. (- a) a))
           int (i/intersection (Math/sqrt 2) shape)
-          hit (i/prepare-hit int ray [int])]
+          comps (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.876757 0.924340 0.829174)
-                 (shade-hit w hit 1)))))
+                 (shade-hit w int comps 1)))))
 
   (testing "The color when a ray misses"
     (let [w (default-world)
@@ -126,9 +126,9 @@
           ray (r/ray (t/point 0. 0. 0.) (t/vector 0. 0. 1))
           shape (get-in w [:objects 1])
           int (i/intersection 1. shape)
-          hit (i/prepare-hit int ray [int])]
+          comps (i/prepare-hit int ray [int])]
       (is (t/eq? c/black
-                 (reflected-color w hit 1)))))
+                 (reflected-color w int comps 1)))))
 
   (testing "The reflected color for a reflective material"
     (let [shape (p/plane (tr/translation 0. -1. 0.)
@@ -137,9 +137,9 @@
           a (/ (Math/sqrt 2) 2)
           ray (r/ray (t/point 0. 0. -3.) (t/vector 0. (- a) a))
           int (i/intersection (Math/sqrt 2) shape)
-          hit (i/prepare-hit int ray [int])]
+          comps (i/prepare-hit int ray [int])]
       (is (t/eq? (c/color 0.190332 0.237915 0.142749)
-                 (reflected-color w hit 1)))))
+                 (reflected-color w int comps 1)))))
 
   (testing "The reflected color at the maximum recursive depth"
     (let [shape (p/plane (tr/translation 0. -1. 0.)
@@ -148,9 +148,9 @@
           a (/ (Math/sqrt 2) 2)
           ray (r/ray (t/point 0. 0. -3.) (t/vector 0. (- a) a))
           int (i/intersection (Math/sqrt 2) shape)
-          hit (i/prepare-hit int ray [int])]
+          comps (i/prepare-hit int ray [int])]
       (is (t/eq? c/black
-                 (reflected-color w hit 0)))))
+                 (reflected-color w int comps 0)))))
 
   (testing "The refracted color with an opaque surface"
     (let [w (default-world)
@@ -158,9 +158,10 @@
           ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
           xs [(i/intersection 4. shape)
               (i/intersection 6. shape)]
-          hit (i/prepare-hit (first xs) ray xs)]
+          hit (first xs)
+          comps (i/prepare-hit (first xs) ray xs)]
       (is (t/eq? c/black
-                 (first (refracted-color w hit 5))))))
+                 (first (refracted-color w hit comps 5))))))
 
   (testing "The refracted color at the maximum recursive depth"
     (let [w (-> (default-world)
@@ -170,9 +171,10 @@
           ray (r/ray (t/point 0. 0. -5.) (t/vector 0. 0. 1.))
           xs [(i/intersection 4. shape)
               (i/intersection 6. shape)]
-          hit (i/prepare-hit (first xs) ray xs)]
+          hit (first xs)
+          comps (i/prepare-hit (first xs) ray xs)]
       (is (t/eq? c/black
-                 (first (refracted-color w hit 0))))))
+                 (first (refracted-color w hit comps 0))))))
 
   (testing "The refracted color under total internal reflection"
     (let [w (-> (default-world)
@@ -182,9 +184,10 @@
           ray (r/ray (t/point 0. 0. (/ (Math/sqrt 2.) 2.)) (t/vector 0. 1. 0.))
           xs [(i/intersection (- (/ (Math/sqrt 2.) 2.)) shape)
               (i/intersection (/ (Math/sqrt 2.) 2.) shape)]
-          hit (i/prepare-hit (nth xs 1) ray xs)]
+          hit (nth xs 1)
+          comps (i/prepare-hit (nth xs 1) ray xs)]
       (is (t/eq? c/black
-                 (first (refracted-color w hit 5))))))
+                 (first (refracted-color w hit comps 5))))))
 
   (testing "The refracted color with a refracted ray"
     (let [w (-> (default-world)
@@ -199,9 +202,10 @@
               (i/intersection -0.4899 B)
               (i/intersection 0.4899 B)
               (i/intersection 0.9899 A)]
-          hit (i/prepare-hit (nth xs 2) ray xs)]
+          hit (nth xs 2)
+          comps (i/prepare-hit (nth xs 2) ray xs)]
       (is (t/eq? (c/color 0. 0.998874 0.047218)
-                 (first (refracted-color w hit 5))))))
+                 (first (refracted-color w hit comps 5))))))
 
   (testing "shade-hit with a transparent material"
     (let [floor (p/plane (tr/translation 0. -1. 0.)
@@ -220,9 +224,9 @@
           sqrt2_on2 (/ (Math/sqrt 2.) 2.)
           ray (r/ray (t/point 0. 0. -3.) (t/vector 0. (- sqrt2_on2) sqrt2_on2))
           xs [(i/intersection (Math/sqrt 2.) floor)]
-          hit (i/prepare-hit (first xs) ray xs)]
+          comps (i/prepare-hit (first xs) ray xs)]
       (is (t/eq? (c/color 0.936425 0.686425 0.686425)
-                 (shade-hit w hit 5)))))
+                 (shade-hit w (first xs) comps 5)))))
 
   (testing "shade-hit with a reflective, transparent material"
     (let [sqrt2_on2 (/ (Math/sqrt 2.) 2.)
@@ -242,6 +246,6 @@
              (:lights (default-world)))
           ray (r/ray (t/point 0. 0. -3.) (t/vector 0. (- sqrt2_on2) sqrt2_on2))
           xs [(i/intersection (Math/sqrt 2.) floor)]
-          hit (i/prepare-hit (first xs) ray xs)]
+          comps (i/prepare-hit (first xs) ray xs)]
       (is (t/eq? (c/color 0.933915 0.696434 0.692430)
-                 (shade-hit w hit 5))))))
+                 (shade-hit w (first xs) comps 5))))))
