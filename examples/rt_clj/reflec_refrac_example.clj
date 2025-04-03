@@ -1,9 +1,15 @@
 ; # Example: reflection and refraction
 
+; {:nextjournal.clerk/visibility {:code :hide :result :hide}}
+; (set! *warn-on-reflection* true)
+; (set! *unchecked-math* :warn-on-boxed)
+
 (ns rt-clj.reflec-refrac-example
   {:nextjournal.clerk/visibility {:code :hide :result :show}}
   (:require [clojure.java.io :as io]
             [clojure.string]
+            ; [criterium.core :as criterium]
+            [clj-async-profiler.core :as prof]
             [nextjournal.clerk :as clerk]
             [rt-clj.cameras :as cm]
             [rt-clj.canvas :as ca]
@@ -73,7 +79,6 @@
     (spit "./examples/img/reflection-example.ppm"
           (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))
 
-
   (let [stripes (pt/stripes (co/color 0. 0.8 0.3) co/white)
         material (-> mr/default-material (assoc :pattern stripes))
         floor (pl/plane (ma/mul (tr/translation 0. 0. -10.)
@@ -107,9 +112,14 @@
                       (tu/vector 0. 0. 1.))
         resolution 4
         cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
-    (spit "./examples/img/refraction-example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))
-
+        ; cam-crit (cm/camera 1 1 (/ Math/PI 3) view)]
+    ; (println "Start profiling...")
+    ; (criterium/quick-bench
+    ;  (clojure.string/join "\n" (ca/ppm-rows (cm/render cam-crit world))))
+    (spit
+     "./examples/img/refraction-example.ppm"
+     (prof/profile
+      (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))
 
   (let [floor (pl/plane (ma/mul (tr/translation 0. 0. -10.)
                                 (tr/rotation-x (/ Math/PI 2)))
@@ -134,5 +144,11 @@
                       (tu/vector 0. 0. 1.))
         resolution 4
         cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
-    (spit "./examples/img/fresnel-example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))
+        ; cam-crit (cm/camera 1 1 (/ Math/PI 3) view)]
+    ; (println "Start profiling...")
+    ; (criterium/quick-bench
+    ;  (clojure.string/join "\n" (ca/ppm-rows (cm/render cam-crit world))))
+    (spit
+     "./examples/img/fresnel-example.ppm"
+     (prof/profile
+      (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))))

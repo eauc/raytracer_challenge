@@ -1,9 +1,15 @@
 ; # Example: groups
 
+; {:nextjournal.clerk/visibility {:code :hide :result :hide}}
+; (set! *warn-on-reflection* true)
+; (set! *unchecked-math* :warn-on-boxed)
+
 (ns rt-clj.groups-example
   {:nextjournal.clerk/visibility {:code :hide :result :show}}
   (:require [clojure.java.io :as io]
             [clojure.string]
+            ; [criterium.core :as criterium]
+            [clj-async-profiler.core :as prof]
             [nextjournal.clerk :as clerk]
             [rt-clj.cameras :as cm]
             [rt-clj.canvas :as ca]
@@ -32,7 +38,7 @@
                    :maximum 1.)
         sph (sp/sphere (ma/mul (tr/translation 0. 1. 0)
                                (tr/scaling 0.5 0.5 0.5)) mat)
-        grp-1 (fn grp-1 [n]
+        grp-1 (fn grp-1 [^double n]
                 (gr/group (ma/mul (tr/rotation-z (* n (/ Math/PI 3.)))
                                   (tr/translation 1.732050 0. 0.))
                           [cyl sph]))
@@ -55,7 +61,12 @@
                       (tu/vector 0. 0. 1.))
         resolution 4
         cam (cm/camera (* 150 resolution) (* 100 resolution) (/ Math/PI 3) view)]
+        ; cam-crit (cm/camera 1 1 (/ Math/PI 3) view)]
+    ; (println "Start profiling...")
+    ; (criterium/quick-bench
+    ;  (clojure.string/join "\n" (ca/ppm-rows (cm/render cam-crit world))))
     (spit
-      "./examples/img/groups-example.ppm"
+     "./examples/img/groups-example.ppm"
+     (prof/profile
       (clojure.string/join
-        "\n" (ca/ppm-rows (cm/render cam world))))))
+       "\n" (ca/ppm-rows (cm/render cam world)))))))

@@ -1,9 +1,15 @@
 ; # Example: CSG shapes
 
+; {:nextjournal.clerk/visibility {:code :hide :result :hide}}
+; (set! *warn-on-reflection* true)
+; (set! *unchecked-math* :warn-on-boxed)
+
 (ns rt-clj.csg-example
   {:nextjournal.clerk/visibility {:code :hide :result :show}}
   (:require [clojure.java.io :as io]
             [clojure.string]
+            ; [criterium.core :as criterium]
+            [clj-async-profiler.core :as prof]
             [nextjournal.clerk :as clerk]
             [rt-clj.cameras :as cm]
             [rt-clj.canvas :as ca]
@@ -52,8 +58,8 @@
         cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./examples/img/csg-spheres-example.ppm"
           (clojure.string/join
-            "\n"
-            (ca/ppm-rows (cm/render cam world {:parallel? true})))))
+           "\n"
+           (ca/ppm-rows (cm/render cam world)))))
 
   (let [cyl1 (assoc (cy/cylinder (ma/id 4)
                                  (assoc mr/default-material
@@ -91,10 +97,16 @@
                       (tu/vector 0. 0. 1.))
         resolution 4
         cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
-    (spit "./examples/img/csg-cube-example.ppm"
-          (clojure.string/join
-            "\n"
-            (ca/ppm-rows (cm/render cam world {:parallel? true})))))
+        ; cam-crit (cm/camera 1 1 (/ Math/PI 3) view)]
+    ; (println "Start profiling...")
+    ; (criterium/quick-bench
+    ;  (clojure.string/join "\n" (ca/ppm-rows (cm/render cam-crit world))))
+    (spit
+     "./examples/img/csg-cube-example.ppm"
+     (prof/profile
+      (clojure.string/join
+       "\n"
+       (ca/ppm-rows (cm/render cam world))))))
 
   (let [walls (cu/cube (ma/mul (tr/translation 11 11 11)
                                (tr/scaling 20. 20. 20.))
@@ -161,5 +173,5 @@
         cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
     (spit "./examples/img/csg-lens-example.ppm"
           (clojure.string/join
-            "\n"
-            (ca/ppm-rows (cm/render cam world {:parallel? true}))))))
+           "\n"
+           (ca/ppm-rows (cm/render cam world))))))

@@ -1,9 +1,15 @@
 ; # Example: planes and spheres
+;
+; {:nextjournal.clerk/visibility {:code :hide :result :hide}}
+; (set! *warn-on-reflection* true)
+; (set! *unchecked-math* :warn-on-boxed)
 
 (ns rt-clj.planes-spheres-example
   {:nextjournal.clerk/visibility {:code :hide :result :show}}
   (:require [clojure.java.io :as io]
             [clojure.string]
+;            [criterium.core :as criterium]
+            [clj-async-profiler.core :as prof]
             [nextjournal.clerk :as clerk]
             [rt-clj.cameras :as cm]
             [rt-clj.canvas :as ca]
@@ -28,8 +34,8 @@
                               :specular 0.))
         floor (pl/plane (ma/id 4) w-material)
         wall (pl/plane (ma/mul
-                         (tr/translation 0. 0. 5.)
-                         (tr/rotation-x (/ Math/PI 2)))
+                        (tr/translation 0. 0. 5.)
+                        (tr/rotation-x (/ Math/PI 2)))
                        w-material)
         middle (sp/sphere (tr/translation -0.5 1. 0.5)
                           (-> mr/default-material
@@ -46,11 +52,17 @@
         world (wo/world [floor wall
                          middle right]
                         [light])
+        view (tr/view (tu/point 0. 1.5 -5.)
+                      (tu/point 0. 1. 0.)
+                      (tu/vector 0. 1. 0.))
         resolution 4
-        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3)
-                       (tr/view (tu/point 0. 1.5 -5.)
-                                (tu/point 0. 1. 0.)
-                                (tu/vector 0. 1. 0.)))]
+        cam (cm/camera (* resolution 150) (* resolution 100) (/ Math/PI 3) view)]
+        ; cam-crit (cm/camera 1 1 (/ Math/PI 3) view)]
+    ; (println "Start profiling...")
+    ; (criterium/quick-bench
+    ;  (clojure.string/join "\n" (ca/ppm-rows (cm/render cam-crit world))))
     ;; print the PPM file
-    (spit "./examples/img/planes-spheres-example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world))))))
+    (prof/profile
+     (spit
+      "./examples/img/planes-spheres-example.ppm"
+      (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))))

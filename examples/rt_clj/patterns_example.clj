@@ -1,5 +1,9 @@
 ; # Examples: patterns
 
+; {:nextjournal.clerk/visibility {:code :hide :result :hide}}
+; (set! *warn-on-reflection* true)
+; (set! *unchecked-math* :warn-on-boxed)
+
 (ns rt-clj.patterns-example
   {:nextjournal.clerk/visibility {:code :hide :result :show}}
   (:require [clojure.java.io :as io]

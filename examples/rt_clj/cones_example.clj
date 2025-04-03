@@ -1,9 +1,15 @@
 ; # Example: cones
 
+; {:nextjournal.clerk/visibility {:code :hide :result :hide}}
+; (set! *warn-on-reflection* true)
+; (set! *unchecked-math* :warn-on-boxed)
+
 (ns rt-clj.cones-example
   {:nextjournal.clerk/visibility {:code :hide :result :show}}
   (:require [clojure.java.io :as io]
             [clojure.string]
+            ; [criterium.core :as criterium]
+            [clj-async-profiler.core :as prof]
             [nextjournal.clerk :as clerk]
             [rt-clj.cameras :as cm]
             [rt-clj.canvas :as ca]
@@ -63,7 +69,14 @@
                       (tu/point 0. 0. -1.5)
                       (tu/vector 0. 0. 1.))
         resolution 4
-        cam (cm/camera (* 150 resolution) (* 100 resolution) (/ Math/PI 3) view)
-        cv (cm/render cam world)]
-    (spit "./examples/img/cones-example.ppm"
-          (clojure.string/join "\n" (ca/ppm-rows cv)))))
+        cam (cm/camera (* 150 resolution) (* 100 resolution) (/ Math/PI 3) view)]
+        ; cam-crit (cm/camera 1 1 (/ Math/PI 3) view)]
+    ; (println "Start profiling...")
+    ; (criterium/quick-bench
+    ;  (clojure.string/join "\n" (ca/ppm-rows (cm/render cam-crit world))))
+    ;; print the PPM file
+    (spit
+     "./examples/img/cones-example.ppm"
+     (prof/profile
+      ; {:event :alloc}
+      (clojure.string/join "\n" (ca/ppm-rows (cm/render cam world)))))))
